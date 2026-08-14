@@ -475,36 +475,74 @@ function ExperienceToggle({
   experience: Experience;
   onChange: (experience: Experience) => void;
 }) {
-  return (
-    <div className="card-surface flex flex-col gap-3 rounded-2xl px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="text-sm font-medium text-slate-500">Choose how to view this market</p>
-        <p className="mt-0.5 text-xs text-slate-400">
-          The underlying market, prices, and history are identical in both views.
-        </p>
-      </div>
-      <div className="flex rounded-full border border-slate-200 bg-slate-50 p-1">
-        {(
-          [
-            { id: "current" as const, label: "Current Experience" },
-            { id: "intelligence" as const, label: "Intelligence Experience" },
-          ]
-        ).map((option) => {
-          const active = option.id === experience;
+  const isIntelligence = experience === "intelligence";
 
-          return (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => onChange(option.id)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                active ? "bg-slate-950 text-white shadow-sm" : "text-slate-500 hover:text-slate-950"
-              }`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
+  return (
+    <div className="card-surface overflow-hidden rounded-2xl">
+      <div className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-500">Choose how to view this market</p>
+          <p className="mt-0.5 text-xs text-slate-400">
+            The underlying market, prices, and history are identical in both views.
+          </p>
+        </div>
+
+        <div className="relative flex rounded-full border border-slate-200 bg-slate-50 p-1">
+          <span
+            aria-hidden
+            className={`absolute inset-y-1 w-[calc(50%-4px)] rounded-full bg-slate-950 shadow-sm transition-transform duration-300 ease-out ${
+              isIntelligence ? "translate-x-[calc(100%+8px)]" : "translate-x-0"
+            }`}
+          />
+          {(
+            [
+              { id: "current" as const, label: "Current Experience" },
+              { id: "intelligence" as const, label: "Intelligence Experience" },
+            ]
+          ).map((option) => {
+            const active = option.id === experience;
+
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onChange(option.id)}
+                className={`relative z-10 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200 ${
+                  active ? "text-white" : "text-slate-500 hover:text-slate-950"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div
+        className={`grid transition-[grid-template-rows] duration-500 ease-out ${
+          isIntelligence ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2 border-t border-slate-100 bg-slate-50/60 px-5 py-4 text-center">
+            {[
+              "What does the market believe?",
+              "Why?",
+              "How strong is the signal?",
+              "What could change it?",
+            ].map((term, index) => (
+              <span key={term} className="flex items-center gap-2.5">
+                {index > 0 ? <span className="text-sm font-semibold text-slate-300">+</span> : null}
+                <span
+                  className="thesis-term-in rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 sm:text-sm"
+                  style={{ animationDelay: `${index * 90}ms` }}
+                >
+                  {term}
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -832,12 +870,19 @@ function CatalystTimelineCard() {
 }
 
 function IntelligenceLayerSection() {
+  const cards = [WhyMovingCard, SignalQualityCard, CatalystTimelineCard, AskThisMarket];
+
   return (
     <div className="space-y-6">
-      <WhyMovingCard />
-      <SignalQualityCard />
-      <CatalystTimelineCard />
-      <AskThisMarket />
+      {cards.map((CardComponent, index) => (
+        <div
+          key={CardComponent.name}
+          className="intel-reveal"
+          style={{ animationDelay: `${index * 90}ms` }}
+        >
+          <CardComponent />
+        </div>
+      ))}
     </div>
   );
 }
@@ -1228,7 +1273,12 @@ export function FedRateMarket() {
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <div className="card-surface rounded-[2rem] p-6 lg:p-7">
+            <div
+              key={experience}
+              className={`card-surface rounded-[2rem] p-6 lg:p-7 ${
+                experience === "intelligence" ? "hero-glow-in" : ""
+              }`}
+            >
               <p className="text-sm font-medium tracking-[0.22em] text-slate-500 uppercase">
                 Market-implied probability
               </p>
