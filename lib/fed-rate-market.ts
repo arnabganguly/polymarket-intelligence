@@ -326,3 +326,78 @@ export const catalysts: Catalyst[] = [
     isResolutionEvent: true,
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Ask This Market
+//
+// A secondary, deterministic natural-language exploration feature. Every
+// answer below is pre-written and derived entirely from the fictional demo
+// data already present in this file — there is no live model or external
+// data behind it. All economic framing is demonstration content only.
+// ---------------------------------------------------------------------------
+
+export type AskVisual =
+  | { kind: "probability-move"; from: number; to: number }
+  | { kind: "yes-no-breakdown"; yesPrice: number }
+  | { kind: "signal-meter" }
+  | { kind: "catalyst-list" }
+  | { kind: "target-gap"; from: number; to: number };
+
+export type AskQuestion = {
+  id: string;
+  question: string;
+  paragraphs: string[];
+  visual?: AskVisual;
+};
+
+export const askQuestions: AskQuestion[] = [
+  {
+    id: "why-rise",
+    question: "Why did the probability rise this week?",
+    paragraphs: [
+      "The market-implied probability of a 25 bps rate cut increased from approximately 45% to 57%.",
+      "The largest movements in this demonstration occurred around weaker employment data, moderating inflation indicators, and changing Federal Reserve commentary.",
+      "These developments caused traders to become more willing to buy YES positions at higher prices.",
+    ],
+    visual: { kind: "probability-move", from: 45, to: 57 },
+  },
+  {
+    id: "reach-70",
+    question: "What would need to happen for this to reach 70%?",
+    paragraphs: [
+      "In this demonstration, reaching 70% would likely require additional confirming information beyond what has already moved the market to 57%.",
+      "Examples could include a further weaker employment report, inflation data that surprises meaningfully to the downside, or Fed commentary that explicitly signals an intent to cut.",
+      "A single data point rarely moves a market this far on its own — it is typically a combination of reinforcing signals.",
+    ],
+    visual: { kind: "target-gap", from: 57, to: 70 },
+  },
+  {
+    id: "signal-strength",
+    question: "How strong is this 57% signal?",
+    paragraphs: [
+      "This demonstration rates the Signal Quality behind the 57% probability as Strong.",
+      "That rating reflects high liquidity, $8.4M in trading volume, a tight bid/ask spread, broad participation, and low concentration among traders — not a statistical claim that the outcome itself is 57% certain.",
+      "A strong signal means the market producing this number looks healthy and hard to distort, not that the prediction is guaranteed to be correct.",
+    ],
+    visual: { kind: "signal-meter" },
+  },
+  {
+    id: "watch-next",
+    question: "What should I watch next?",
+    paragraphs: [
+      "In this demonstration, the next scheduled events that could move this probability are the CPI Report, the Employment Report, a Fed Chair Speech, and ultimately the FOMC Meeting where this market resolves.",
+      "Each of these could push the probability up or down depending on what the data or commentary shows.",
+    ],
+    visual: { kind: "catalyst-list" },
+  },
+  {
+    id: "buy-yes-meaning",
+    question: "What does buying YES at 58¢ mean?",
+    paragraphs: [
+      "You are paying approximately $0.58 for one YES share.",
+      "If the market ultimately resolves YES, the share is worth $1.",
+      "If it resolves NO, the YES share is worth $0.",
+    ],
+    visual: { kind: "yes-no-breakdown", yesPrice: 0.58 },
+  },
+];

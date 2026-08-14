@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  askQuestions,
   catalysts,
   chartEvents,
   cut25History,
@@ -15,6 +16,7 @@ import {
   signalQualityExplainer,
   signalQualityRating,
   signalQualityTiers,
+  type AskQuestion,
   type Catalyst,
   type ChartEvent,
   type DriverDirection,
@@ -834,6 +836,172 @@ function IntelligenceLayerSection() {
       <WhyMovingCard />
       <SignalQualityCard />
       <CatalystTimelineCard />
+      <AskThisMarket />
+    </div>
+  );
+}
+
+function AskAnswerVisual({ question }: { question: AskQuestion }) {
+  const { visual } = question;
+  if (!visual) return null;
+
+  if (visual.kind === "probability-move") {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="text-center">
+          <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">Before</p>
+          <p className="mt-1 text-lg font-semibold text-slate-900">{visual.from}%</p>
+        </div>
+        <span className="text-slate-400">→</span>
+        <div className="text-center">
+          <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">Now</p>
+          <p className="mt-1 text-lg font-semibold text-emerald-600">{visual.to}%</p>
+        </div>
+        <span className="ml-auto rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          +{visual.to - visual.from} pts
+        </span>
+      </div>
+    );
+  }
+
+  if (visual.kind === "target-gap") {
+    const gap = visual.to - visual.from;
+    return (
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+          <span>Today: {visual.from}%</span>
+          <span>Target: {visual.to}%</span>
+        </div>
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+          <div
+            className="h-full rounded-full bg-blue-600"
+            style={{ width: `${(visual.from / visual.to) * 100}%` }}
+          />
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Would need another <span className="font-semibold text-slate-700">+{gap} points</span> of
+          movement in this demonstration.
+        </p>
+      </div>
+    );
+  }
+
+  if (visual.kind === "signal-meter") {
+    const tierIndex = signalQualityTiers.indexOf(signalQualityRating);
+    return (
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-[0.1em] text-slate-500">Signal Quality</p>
+          <p className="text-sm font-semibold text-slate-900">{signalQualityRating}</p>
+        </div>
+        <div className="mt-2 flex gap-1.5">
+          {signalQualityTiers.map((tier, index) => (
+            <span
+              key={tier}
+              className={`h-1.5 flex-1 rounded-full ${
+                index <= tierIndex ? "bg-blue-600" : "bg-slate-200"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (visual.kind === "catalyst-list") {
+    return (
+      <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        {catalysts.map((catalyst) => (
+          <div key={catalyst.id} className="flex items-center justify-between text-xs">
+            <span className="font-medium text-slate-700">{catalyst.title}</span>
+            <span className="text-slate-500">{catalyst.relativeLabel}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (visual.kind === "yes-no-breakdown") {
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
+          <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-emerald-700">
+            If YES resolves
+          </p>
+          <p className="mt-1 text-lg font-semibold text-emerald-700">Worth $1.00</p>
+        </div>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-center">
+          <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-rose-700">
+            If NO resolves
+          </p>
+          <p className="mt-1 text-lg font-semibold text-rose-700">Worth $0.00</p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function AskThisMarket() {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const active = activeId ? askQuestions.find((q) => q.id === activeId) ?? null : null;
+
+  return (
+    <div className="card-surface rounded-3xl p-5 lg:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-slate-500">Ask this market</p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-950">
+            Ask a question in plain language
+          </h2>
+        </div>
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
+          Pre-written demo answers
+        </span>
+      </div>
+
+      <p className="mb-4 text-sm leading-6 text-slate-600">
+        Pick a question below. Answers are deterministic and based entirely on the fictional demo
+        data already shown on this page — there is no live model or external data behind them.
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+        {askQuestions.map((q) => (
+          <button
+            key={q.id}
+            type="button"
+            onClick={() => setActiveId((current) => (current === q.id ? null : q.id))}
+            className={`rounded-full border px-3.5 py-2 text-left text-sm font-medium transition-colors ${
+              activeId === q.id
+                ? "border-blue-600 bg-blue-600 text-white"
+                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            {q.question}
+          </button>
+        ))}
+      </div>
+
+      {active ? (
+        <div className="fade-in-up mt-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700">
+            {active.question}
+          </p>
+          <div className="mt-3 space-y-3 text-sm leading-6 text-slate-700">
+            {active.paragraphs.map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
+          </div>
+          <div className="mt-4">
+            <AskAnswerVisual question={active} />
+          </div>
+          <p className="mt-4 text-[11px] leading-5 text-slate-400">
+            Demonstration content only. This answer is a pre-written response based on the fictional
+            data in this prototype, not real economic analysis or financial advice.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
