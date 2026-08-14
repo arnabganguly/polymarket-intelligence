@@ -497,7 +497,7 @@ function ExperienceToggle({
           {(
             [
               { id: "current" as const, label: "Current Experience" },
-              { id: "intelligence" as const, label: "Intelligence Experience" },
+              { id: "intelligence" as const, label: "Intelligent Experience" },
             ]
           ).map((option) => {
             const active = option.id === experience;
