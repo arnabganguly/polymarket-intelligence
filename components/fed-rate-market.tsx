@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   askQuestions,
   catalysts,
@@ -1164,9 +1165,17 @@ export function FedRateMarket() {
               From market probability to market understanding.
             </p>
           </div>
-          <p className="text-xs font-medium text-slate-400 sm:pt-1 sm:text-right">
-            Concept &amp; prototype by Arnab Ganguly
-          </p>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <Link
+              href="/vision"
+              className="rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900"
+            >
+              Product Vision →
+            </Link>
+            <p className="text-xs font-medium text-slate-400 sm:text-right">
+              Concept &amp; prototype by Arnab Ganguly
+            </p>
+          </div>
         </div>
 
         <div className="card-surface mb-6 flex flex-wrap items-center gap-3 rounded-2xl border-amber-200 bg-amber-50/80 px-5 py-3.5">
