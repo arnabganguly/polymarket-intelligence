@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type JSX } from "react";
 import Link from "next/link";
 import {
   askQuestions,
@@ -92,9 +92,9 @@ function historyFor(outcome: Outcome): HistoryPoint[] {
   });
 }
 
-function chartGeometry(points: HistoryPoint[]) {
+function chartGeometry(points: HistoryPoint[], large = false) {
   const width = 720;
-  const height = 220;
+  const height = large ? 300 : 220;
   const paddingX = 20;
   const paddingTop = 20;
   const paddingBottom = 32;
@@ -208,21 +208,36 @@ function EventExplanationCard({ event, onClose }: { event: ChartEvent; onClose: 
 function ProbabilityHistoryChart({
   outcome,
   experience,
+  presentationMode = false,
+  activeEventId: controlledActiveEventId,
+  onActiveEventChange,
 }: {
   outcome: Outcome;
   experience: Experience;
+  presentationMode?: boolean;
+  activeEventId?: string | null;
+  onActiveEventChange?: (id: string | null) => void;
 }) {
   const points = useMemo(() => historyFor(outcome), [outcome]);
   const { coordinates, line, area, width, height, max, min } = useMemo(
-    () => chartGeometry(points),
-    [points],
+    () => chartGeometry(points, presentationMode),
+    [points, presentationMode],
   );
   const first = points[0];
   const last = points[points.length - 1];
   const change = last.probability - first.probability;
 
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null);
-  const [activeEventId, setActiveEventId] = useState<string | null>(null);
+  const [internalActiveEventId, setInternalActiveEventId] = useState<string | null>(null);
+  const activeEventId = controlledActiveEventId !== undefined ? controlledActiveEventId : internalActiveEventId;
+  const setActiveEventId = (updater: string | null | ((current: string | null) => string | null)) => {
+    const next = typeof updater === "function" ? updater(activeEventId) : updater;
+    if (onActiveEventChange) {
+      onActiveEventChange(next);
+    } else {
+      setInternalActiveEventId(next);
+    }
+  };
 
   const showEvents = experience === "intelligence" && outcome.id === "cut-25";
   const eventsByPoint = useMemo(() => {
@@ -235,11 +250,15 @@ function ProbabilityHistoryChart({
   const activeEvent = activeEventId ? chartEvents.find((event) => event.id === activeEventId) ?? null : null;
 
   return (
-    <div className="card-surface rounded-3xl p-5 lg:p-6">
+    <div className={`card-surface rounded-3xl p-5 lg:p-6 ${presentationMode ? "lg:p-7" : ""}`}>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-500">Probability history</p>
-          <h2 className="mt-1 text-lg font-semibold text-slate-950">
+          <h2
+            className={`mt-1 font-semibold text-slate-950 ${
+              presentationMode ? "text-xl lg:text-2xl" : "text-lg"
+            }`}
+          >
             &ldquo;{outcome.label}&rdquo; over the last two weeks
           </h2>
         </div>
@@ -257,7 +276,10 @@ function ProbabilityHistoryChart({
           <EventExplanationCard event={activeEvent} onClose={() => setActiveEventId(null)} />
         ) : null}
 
-        <svg viewBox={`0 0 ${width} ${height}`} className="h-[220px] w-full overflow-visible">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className={`w-full overflow-visible ${presentationMode ? "h-[300px]" : "h-[220px]"}`}
+        >
           {[0.25, 0.5, 0.75].map((ratio) => {
             const y = 20 + ratio * (height - 32 - 20);
 
@@ -471,23 +493,37 @@ function OutcomesCard({
 function ExperienceToggle({
   experience,
   onChange,
+  presentationMode = false,
 }: {
   experience: Experience;
   onChange: (experience: Experience) => void;
+  presentationMode?: boolean;
 }) {
   const isIntelligence = experience === "intelligence";
 
   return (
-    <div className="card-surface overflow-hidden rounded-2xl">
+    <div
+      className={`card-surface overflow-hidden rounded-2xl ${
+        presentationMode ? "ring-2 ring-blue-200" : ""
+      }`}
+    >
       <div className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Choose how to view this market</p>
-          <p className="mt-0.5 text-xs text-slate-400">
-            The underlying market, prices, and history are identical in both views.
-          </p>
-        </div>
+        {!presentationMode ? (
+          <div>
+            <p className="text-sm font-medium text-slate-500">Choose how to view this market</p>
+            <p className="mt-0.5 text-xs text-slate-400">
+              The underlying market, prices, and history are identical in both views.
+            </p>
+          </div>
+        ) : (
+          <div className="hidden sm:block" />
+        )}
 
-        <div className="relative flex rounded-full border border-slate-200 bg-slate-50 p-1">
+        <div
+          className={`relative flex rounded-full border border-slate-200 bg-slate-50 p-1 ${
+            presentationMode ? "mx-auto sm:mx-0" : ""
+          }`}
+        >
           <span
             aria-hidden
             className={`absolute inset-y-1 w-[calc(50%-4px)] rounded-full bg-slate-950 shadow-sm transition-transform duration-300 ease-out ${
@@ -507,9 +543,9 @@ function ExperienceToggle({
                 key={option.id}
                 type="button"
                 onClick={() => onChange(option.id)}
-                className={`relative z-10 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200 ${
-                  active ? "text-white" : "text-slate-500 hover:text-slate-950"
-                }`}
+                className={`relative z-10 rounded-full font-semibold transition-colors duration-200 ${
+                  presentationMode ? "px-5 py-2.5 text-base" : "px-4 py-2 text-sm"
+                } ${active ? "text-white" : "text-slate-500 hover:text-slate-950"}`}
               >
                 {option.label}
               </button>
@@ -603,7 +639,7 @@ function DriverCard({ driver, index }: { driver: MarketDriver; index: number }) 
 
 function WhyMovingCard() {
   return (
-    <div className="card-surface rounded-3xl p-5 lg:p-6">
+    <div id="why-moving" className="card-surface rounded-3xl p-5 lg:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-500">Question 1 of 3</p>
@@ -672,7 +708,7 @@ function SignalQualityCard() {
   const tierIndex = signalQualityTiers.indexOf(signalQualityRating);
 
   return (
-    <div className="card-surface rounded-3xl p-5 lg:p-6">
+    <div id="signal-quality" className="card-surface rounded-3xl p-5 lg:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-500">Question 2 of 3</p>
@@ -838,7 +874,7 @@ function CatalystRow({ catalyst, isLast }: { catalyst: Catalyst; isLast: boolean
 
 function CatalystTimelineCard() {
   return (
-    <div className="card-surface rounded-3xl p-5 lg:p-6">
+    <div id="whats-next" className="card-surface rounded-3xl p-5 lg:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-500">Question 3 of 3</p>
@@ -869,18 +905,28 @@ function CatalystTimelineCard() {
   );
 }
 
-function IntelligenceLayerSection() {
-  const cards = [WhyMovingCard, SignalQualityCard, CatalystTimelineCard, AskThisMarket];
+function IntelligenceLayerSection({
+  askActiveId,
+  onAskActiveChange,
+}: {
+  askActiveId?: string | null;
+  onAskActiveChange?: (id: string | null) => void;
+}) {
+  const cards: Array<{ key: string; render: () => JSX.Element }> = [
+    { key: "why-moving", render: () => <WhyMovingCard /> },
+    { key: "signal-quality", render: () => <SignalQualityCard /> },
+    { key: "catalysts", render: () => <CatalystTimelineCard /> },
+    {
+      key: "ask",
+      render: () => <AskThisMarket activeId={askActiveId} onActiveChange={onAskActiveChange} />,
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      {cards.map((CardComponent, index) => (
-        <div
-          key={CardComponent.name}
-          className="intel-reveal"
-          style={{ animationDelay: `${index * 90}ms` }}
-        >
-          <CardComponent />
+      {cards.map((card, index) => (
+        <div key={card.key} className="intel-reveal" style={{ animationDelay: `${index * 90}ms` }}>
+          {card.render()}
         </div>
       ))}
     </div>
@@ -989,12 +1035,27 @@ function AskAnswerVisual({ question }: { question: AskQuestion }) {
   return null;
 }
 
-function AskThisMarket() {
-  const [activeId, setActiveId] = useState<string | null>(null);
+function AskThisMarket({
+  activeId: controlledActiveId,
+  onActiveChange,
+}: {
+  activeId?: string | null;
+  onActiveChange?: (id: string | null) => void;
+} = {}) {
+  const [internalActiveId, setInternalActiveId] = useState<string | null>(null);
+  const activeId = controlledActiveId !== undefined ? controlledActiveId : internalActiveId;
+  const setActiveId = (updater: string | null | ((current: string | null) => string | null)) => {
+    const next = typeof updater === "function" ? updater(activeId) : updater;
+    if (onActiveChange) {
+      onActiveChange(next);
+    } else {
+      setInternalActiveId(next);
+    }
+  };
   const active = activeId ? askQuestions.find((q) => q.id === activeId) ?? null : null;
 
   return (
-    <div className="card-surface rounded-3xl p-5 lg:p-6">
+    <div id="ask-this-market" className="card-surface rounded-3xl p-5 lg:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-500">Ask this market</p>
@@ -1185,9 +1246,35 @@ function TradingPanel({ outcome }: { outcome: Outcome }) {
   );
 }
 
+const presentationSteps = [
+  "current",
+  "intelligence",
+  "why-moving",
+  "chart-event",
+  "signal-quality",
+  "whats-next",
+  "ask-70",
+] as const;
+
+type PresentationStep = (typeof presentationSteps)[number];
+
+const presentationStepCopy: Record<PresentationStep, { label: string; hint: string }> = {
+  current: { label: "Start", hint: "What the market believes right now." },
+  intelligence: { label: "Add intelligence", hint: "Switch on the Intelligence Layer." },
+  "why-moving": { label: "Why is this moving?", hint: "Scroll to the drivers behind the move." },
+  "chart-event": { label: "Show a driver on the chart", hint: "Open the Fed Commentary event marker." },
+  "signal-quality": { label: "How strong is the signal?", hint: "Scroll to Signal Quality." },
+  "whats-next": { label: "What could change it next?", hint: "Scroll to upcoming catalysts." },
+  "ask-70": { label: "Ask the market", hint: "Ask what it would take to reach 70%." },
+};
+
 export function FedRateMarket() {
   const [selectedId, setSelectedId] = useState<OutcomeId>(defaultOutcomeId);
   const [experience, setExperience] = useState<Experience>("current");
+  const [presentationMode, setPresentationMode] = useState(false);
+  const [presentationStepIndex, setPresentationStepIndex] = useState(0);
+  const [chartActiveEventId, setChartActiveEventId] = useState<string | null>(null);
+  const [askActiveId, setAskActiveId] = useState<string | null>(null);
   const outcome = getOutcome(selectedId);
 
   const history = historyFor(outcome);
@@ -1195,66 +1282,167 @@ export function FedRateMarket() {
   const today = history[history.length - 1];
   const recentChange = threeDaysAgo ? today.probability - threeDaysAgo.probability : 0;
 
+  const scrollToId = (id: string) => {
+    if (typeof window === "undefined") return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const runPresentationStep = (step: PresentationStep) => {
+    if (step === "current") {
+      setExperience("current");
+    } else if (step === "intelligence") {
+      setExperience("intelligence");
+    } else if (step === "why-moving") {
+      setExperience("intelligence");
+      scrollToId("why-moving");
+    } else if (step === "chart-event") {
+      setExperience("intelligence");
+      setChartActiveEventId("fed-commentary-event");
+    } else if (step === "signal-quality") {
+      setExperience("intelligence");
+      setChartActiveEventId(null);
+      scrollToId("signal-quality");
+    } else if (step === "whats-next") {
+      setExperience("intelligence");
+      scrollToId("whats-next");
+    } else if (step === "ask-70") {
+      setExperience("intelligence");
+      scrollToId("ask-this-market");
+      setAskActiveId("reach-70");
+    }
+  };
+
+  const goToPresentationStep = (index: number) => {
+    const clamped = Math.max(0, Math.min(presentationSteps.length - 1, index));
+    setPresentationStepIndex(clamped);
+    runPresentationStep(presentationSteps[clamped]);
+  };
+
+  const togglePresentationMode = () => {
+    setPresentationMode((prev) => {
+      const next = !prev;
+      if (next) {
+        setPresentationStepIndex(0);
+        runPresentationStep("current");
+      } else {
+        setChartActiveEventId(null);
+        setAskActiveId(null);
+      }
+      return next;
+    });
+  };
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(41,91,255,0.10),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#f4f7fb_100%)]">
-      <div className="mx-auto max-w-[1180px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Coinbase · Roundtable Research Prototype
+      <div
+        className={`mx-auto max-w-[1180px] px-4 sm:px-6 lg:px-8 ${
+          presentationMode ? "py-4 lg:py-5" : "py-6 lg:py-8"
+        }`}
+      >
+        {presentationMode ? (
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+              Polymarket Intelligence · Presentation Mode
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-[1.75rem]">
-              Polymarket Intelligence
-            </h1>
-            <p className="mt-0.5 text-sm text-slate-500">
-              From market probability to market understanding.
-            </p>
-          </div>
-          <div className="flex flex-col items-start gap-2 sm:items-end">
-            <Link
-              href="/vision"
+            <button
+              type="button"
+              onClick={togglePresentationMode}
               className="rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900"
             >
-              Product Vision →
-            </Link>
-            <p className="text-xs font-medium text-slate-400 sm:text-right">
-              Concept &amp; prototype by Arnab Ganguly
+              Exit presentation mode
+            </button>
+          </div>
+        ) : (
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                Coinbase · Roundtable Research Prototype
+              </p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-[1.75rem]">
+                Polymarket Intelligence
+              </h1>
+              <p className="mt-0.5 text-sm text-slate-500">
+                From market probability to market understanding.
+              </p>
+            </div>
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/vision"
+                  className="rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900"
+                >
+                  Product Vision →
+                </Link>
+                <button
+                  type="button"
+                  onClick={togglePresentationMode}
+                  className="rounded-full border border-slate-900 bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
+                >
+                  Presentation mode
+                </button>
+              </div>
+              <p className="text-xs font-medium text-slate-400 sm:text-right">
+                Concept &amp; prototype by Arnab Ganguly
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!presentationMode ? (
+          <div className="card-surface mb-6 flex flex-wrap items-center gap-3 rounded-2xl border-amber-200 bg-amber-50/80 px-5 py-3.5">
+            <span className="rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white">
+              Demo Market
+            </span>
+            <p className="text-sm leading-6 text-amber-900">
+              All prices, probabilities, and history on this page are fictional and generated for this
+              prototype. They do not represent real Federal Reserve predictions or live market data.
             </p>
           </div>
+        ) : null}
+
+        <div className={presentationMode ? "mb-4" : "mb-6"}>
+          <ExperienceToggle
+            experience={experience}
+            onChange={(next) => {
+              setExperience(next);
+              if (presentationMode) {
+                setPresentationStepIndex(next === "intelligence" ? 1 : 0);
+              }
+            }}
+            presentationMode={presentationMode}
+          />
         </div>
 
-        <div className="card-surface mb-6 flex flex-wrap items-center gap-3 rounded-2xl border-amber-200 bg-amber-50/80 px-5 py-3.5">
-          <span className="rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white">
-            Demo Market
-          </span>
-          <p className="text-sm leading-6 text-amber-900">
-            All prices, probabilities, and history on this page are fictional and generated for this
-            prototype. They do not represent real Federal Reserve predictions or live market data.
-          </p>
-        </div>
+        <header
+          className={`card-surface mb-6 rounded-[2rem] ${
+            presentationMode ? "px-5 py-4 lg:px-7 lg:py-5" : "px-5 py-5 lg:px-7 lg:py-6"
+          }`}
+        >
+          {!presentationMode ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+              <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1">
+                {marketMeta.category}
+              </span>
+              <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1">
+                Resolves {marketMeta.resolution}
+              </span>
+              <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-amber-700">
+                {marketMeta.status}
+              </span>
+            </div>
+          ) : null}
 
-        <div className="mb-6">
-          <ExperienceToggle experience={experience} onChange={setExperience} />
-        </div>
-
-        <header className="card-surface mb-6 rounded-[2rem] px-5 py-5 lg:px-7 lg:py-6">
-          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-            <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1">
-              {marketMeta.category}
-            </span>
-            <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1">
-              Resolves {marketMeta.resolution}
-            </span>
-            <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-amber-700">
-              {marketMeta.status}
-            </span>
-          </div>
-
-          <h2 className="mt-4 max-w-3xl text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+          <h2
+            className={`max-w-3xl font-semibold tracking-tight text-slate-950 ${
+              presentationMode ? "mt-1 text-3xl sm:text-4xl lg:text-[2.6rem]" : "mt-4 text-3xl sm:text-4xl"
+            }`}
+          >
             {marketMeta.question}
           </h2>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className={`grid grid-cols-2 gap-3 sm:grid-cols-4 ${presentationMode ? "mt-4" : "mt-5"}`}>
             {[
               { label: "Selected outcome", value: `${outcome.probability}%` },
               { label: "Trading volume", value: marketMeta.volume },
@@ -1275,7 +1463,7 @@ export function FedRateMarket() {
           <div className="space-y-6">
             <div
               key={experience}
-              className={`card-surface rounded-[2rem] p-6 lg:p-7 ${
+              className={`card-surface rounded-[2rem] ${presentationMode ? "p-6 lg:p-8" : "p-6 lg:p-7"} ${
                 experience === "intelligence" ? "hero-glow-in" : ""
               }`}
             >
@@ -1284,7 +1472,11 @@ export function FedRateMarket() {
               </p>
               <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <p className="text-6xl font-semibold tracking-tight text-slate-950">
+                  <p
+                    className={`font-semibold tracking-tight text-slate-950 ${
+                      presentationMode ? "text-7xl lg:text-8xl" : "text-6xl"
+                    }`}
+                  >
                     {outcome.probability}%
                   </p>
                   <p className="mt-1 text-sm font-medium text-slate-500">Selected outcome: {outcome.label}</p>
@@ -1300,11 +1492,13 @@ export function FedRateMarket() {
                       the last 3 days
                     </p>
                   ) : null}
-                  <p className="mt-3 max-w-md text-sm leading-6 text-slate-600">
-                    The market currently prices &ldquo;{outcome.label}&rdquo; at a{" "}
-                    {outcome.probability}% probability. Buy YES at {formatCents(outcome.yesPrice)} or
-                    NO at {formatCents(outcome.noPrice)} based on whether you agree.
-                  </p>
+                  {!presentationMode ? (
+                    <p className="mt-3 max-w-md text-sm leading-6 text-slate-600">
+                      The market currently prices &ldquo;{outcome.label}&rdquo; at a{" "}
+                      {outcome.probability}% probability. Buy YES at {formatCents(outcome.yesPrice)} or
+                      NO at {formatCents(outcome.noPrice)} based on whether you agree.
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex gap-3">
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
@@ -1327,14 +1521,60 @@ export function FedRateMarket() {
               </div>
             </div>
 
-            <OutcomesCard selectedId={selectedId} onSelect={setSelectedId} />
-            <ProbabilityHistoryChart outcome={outcome} experience={experience} />
-            {experience === "intelligence" ? <IntelligenceLayerSection /> : null}
+            {!presentationMode ? <OutcomesCard selectedId={selectedId} onSelect={setSelectedId} /> : null}
+            <ProbabilityHistoryChart
+              outcome={outcome}
+              experience={experience}
+              presentationMode={presentationMode}
+              activeEventId={chartActiveEventId}
+              onActiveEventChange={setChartActiveEventId}
+            />
+            {experience === "intelligence" ? (
+              <IntelligenceLayerSection askActiveId={askActiveId} onAskActiveChange={setAskActiveId} />
+            ) : null}
           </div>
 
           <TradingPanel outcome={outcome} />
         </div>
       </div>
+
+      {presentationMode ? (
+        <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+          <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur">
+            <button
+              type="button"
+              onClick={() => goToPresentationStep(presentationStepIndex - 1)}
+              disabled={presentationStepIndex === 0}
+              className="rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Back
+            </button>
+            <div className="flex items-center gap-1.5">
+              {presentationSteps.map((step, index) => (
+                <span
+                  key={step}
+                  className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                    index === presentationStepIndex ? "bg-slate-900" : "bg-slate-200"
+                  }`}
+                />
+              ))}
+            </div>
+            <p className="hidden text-xs font-medium text-slate-500 sm:block">
+              {presentationStepCopy[presentationSteps[presentationStepIndex]].hint}
+            </p>
+            <button
+              type="button"
+              onClick={() => goToPresentationStep(presentationStepIndex + 1)}
+              disabled={presentationStepIndex === presentationSteps.length - 1}
+              className="rounded-full bg-slate-950 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              {presentationStepIndex === presentationSteps.length - 1
+                ? "Done"
+                : presentationStepCopy[presentationSteps[presentationStepIndex + 1]].label}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
