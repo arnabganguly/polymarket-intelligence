@@ -1289,26 +1289,37 @@ export function FedRateMarket() {
     });
   };
 
+  // The entire Intelligence Layer (Why Moving, Signal Quality, Catalysts, Ask
+  // This Market) is authored specifically for the "Cut rates by 25 bps"
+  // outcome. Switching to Intelligence Experience always re-selects that
+  // outcome so the narrative never contradicts the displayed probability.
+  const changeExperience = (next: Experience) => {
+    setExperience(next);
+    if (next === "intelligence") {
+      setSelectedId("cut-25");
+    }
+  };
+
   const runPresentationStep = (step: PresentationStep) => {
     if (step === "current") {
-      setExperience("current");
+      changeExperience("current");
     } else if (step === "intelligence") {
-      setExperience("intelligence");
+      changeExperience("intelligence");
     } else if (step === "why-moving") {
-      setExperience("intelligence");
+      changeExperience("intelligence");
       scrollToId("why-moving");
     } else if (step === "chart-event") {
-      setExperience("intelligence");
+      changeExperience("intelligence");
       setChartActiveEventId("fed-commentary-event");
     } else if (step === "signal-quality") {
-      setExperience("intelligence");
+      changeExperience("intelligence");
       setChartActiveEventId(null);
       scrollToId("signal-quality");
     } else if (step === "whats-next") {
-      setExperience("intelligence");
+      changeExperience("intelligence");
       scrollToId("whats-next");
     } else if (step === "ask-70") {
-      setExperience("intelligence");
+      changeExperience("intelligence");
       scrollToId("ask-this-market");
       setAskActiveId("reach-70");
     }
@@ -1406,7 +1417,7 @@ export function FedRateMarket() {
           <ExperienceToggle
             experience={experience}
             onChange={(next) => {
-              setExperience(next);
+              changeExperience(next);
               if (presentationMode) {
                 setPresentationStepIndex(next === "intelligence" ? 1 : 0);
               }
@@ -1521,7 +1532,9 @@ export function FedRateMarket() {
               </div>
             </div>
 
-            {!presentationMode ? <OutcomesCard selectedId={selectedId} onSelect={setSelectedId} /> : null}
+            {!presentationMode && experience === "current" ? (
+              <OutcomesCard selectedId={selectedId} onSelect={setSelectedId} />
+            ) : null}
             <ProbabilityHistoryChart
               outcome={outcome}
               experience={experience}
