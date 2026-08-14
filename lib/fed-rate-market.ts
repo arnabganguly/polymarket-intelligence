@@ -105,6 +105,58 @@ export type MarketDriver = {
 export const movingSummary =
   "The market-implied probability of a 25 bps rate cut has increased as traders react to signs of cooling economic conditions and changing expectations about Federal Reserve policy.";
 
+// Fictional event markers plotted on the probability history chart. Each
+// event is anchored to a specific point in `cut25History` and explains the
+// causal chain from "real-world information" to "implied probability
+// changes." All content is demo/prototype analysis only.
+export type ChartEvent = {
+  id: string;
+  pointLabel: string; // matches a HistoryPoint.label in cut25History
+  headline: string;
+  dateLabel: string;
+  beforeProbability: number;
+  afterProbability: number;
+  whatHappened: string;
+  whyItMattered: string;
+};
+
+export const chartEvents: ChartEvent[] = [
+  {
+    id: "employment-report",
+    pointLabel: "3 days ago",
+    headline: "Employment Report",
+    dateLabel: "3 days ago",
+    beforeProbability: 44,
+    afterProbability: 49,
+    whatHappened: "Employment data came in weaker than expected in this fictional demonstration.",
+    whyItMattered:
+      "Traders interpreted the weaker labor-market signal as increasing the possibility of monetary-policy easing.",
+  },
+  {
+    id: "inflation-report",
+    pointLabel: "Yesterday",
+    headline: "Inflation Report",
+    dateLabel: "Yesterday",
+    beforeProbability: 49,
+    afterProbability: 51,
+    whatHappened: "Inflation indicators showed continued moderation in this fictional demonstration.",
+    whyItMattered:
+      "Traders read cooling price pressure as giving the Federal Reserve more room to lower rates.",
+  },
+  {
+    id: "fed-commentary-event",
+    pointLabel: "Today",
+    headline: "Fed Commentary",
+    dateLabel: "Today",
+    beforeProbability: 51,
+    afterProbability: 57,
+    whatHappened:
+      "Fed commentary suggested increased attention to slowing economic activity in this fictional demonstration.",
+    whyItMattered:
+      "Traders revised their expectations toward a higher likelihood of a near-term rate cut.",
+  },
+];
+
 export const marketDrivers: MarketDriver[] = [
   {
     id: "employment-data",

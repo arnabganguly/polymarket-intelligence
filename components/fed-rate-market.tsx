@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   catalysts,
+  chartEvents,
   cut25History,
   defaultOutcomeId,
   getOutcome,
@@ -15,6 +16,7 @@ import {
   signalQualityRating,
   signalQualityTiers,
   type Catalyst,
+  type ChartEvent,
   type DriverDirection,
   type HistoryPoint,
   type MarketDriver,
@@ -111,6 +113,95 @@ function chartGeometry(points: HistoryPoint[]) {
   return { coordinates, line, area, width, height, max, min };
 }
 
+const CAUSAL_CHAIN_STEPS = [
+  "Real-world information",
+  "Traders update their beliefs",
+  "Trading behavior changes",
+  "Market price changes",
+  "Implied probability changes",
+];
+
+function EventExplanationCard({ event, onClose }: { event: ChartEvent; onClose: () => void }) {
+  const movement = event.afterProbability - event.beforeProbability;
+
+  return (
+    <div
+      role="dialog"
+      aria-label={`${event.headline} explanation`}
+      className="absolute inset-x-0 bottom-full z-40 mb-3 origin-bottom rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:inset-x-auto sm:w-[360px]"
+    >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-700">
+            Event marker · {event.dateLabel}
+          </p>
+          <h3 className="mt-1 text-base font-semibold text-slate-950">{event.headline}</h3>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close explanation"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 text-xs text-slate-500 hover:border-slate-300 hover:text-slate-800"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">Before</p>
+          <p className="mt-1 text-sm font-semibold text-slate-900">{event.beforeProbability}%</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">After</p>
+          <p className="mt-1 text-sm font-semibold text-slate-900">{event.afterProbability}%</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">Movement</p>
+          <p className={`mt-1 text-sm font-semibold ${movement >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+            {movement >= 0 ? "+" : ""}
+            {movement} pts
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3 text-sm leading-6 text-slate-600">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+            What happened
+          </p>
+          <p className="mt-1">{event.whatHappened}</p>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+            Why it mattered
+          </p>
+          <p className="mt-1">{event.whyItMattered}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-3">
+        <div className="flex flex-col items-center gap-1">
+          {CAUSAL_CHAIN_STEPS.map((step, index) => (
+            <div key={step} className="flex flex-col items-center">
+              <span className="rounded-full bg-white px-2.5 py-1 text-[10.5px] font-medium text-slate-700 shadow-sm ring-1 ring-slate-200">
+                {step}
+              </span>
+              {index < CAUSAL_CHAIN_STEPS.length - 1 ? (
+                <span className="my-0.5 text-slate-400">↓</span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="mt-3 text-[11px] leading-5 text-slate-400">
+        Fictional demonstration analysis for prototype purposes only.
+      </p>
+    </div>
+  );
+}
+
 function ProbabilityHistoryChart({
   outcome,
   experience,
@@ -126,6 +217,19 @@ function ProbabilityHistoryChart({
   const first = points[0];
   const last = points[points.length - 1];
   const change = last.probability - first.probability;
+
+  const [hoveredLabel, setHoveredLabel] = useState<string | null>(null);
+  const [activeEventId, setActiveEventId] = useState<string | null>(null);
+
+  const showEvents = experience === "intelligence" && outcome.id === "cut-25";
+  const eventsByPoint = useMemo(() => {
+    const map = new Map<string, ChartEvent>();
+    if (showEvents) {
+      chartEvents.forEach((event) => map.set(event.pointLabel, event));
+    }
+    return map;
+  }, [showEvents]);
+  const activeEvent = activeEventId ? chartEvents.find((event) => event.id === activeEventId) ?? null : null;
 
   return (
     <div className="card-surface rounded-3xl p-5 lg:p-6">
@@ -145,8 +249,12 @@ function ProbabilityHistoryChart({
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(41,91,255,0.10),rgba(255,255,255,0.85))] p-3">
-        <svg viewBox={`0 0 ${width} ${height}`} className="h-[220px] w-full">
+      <div className="relative overflow-visible rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(41,91,255,0.10),rgba(255,255,255,0.85))] p-3">
+        {activeEvent ? (
+          <EventExplanationCard event={activeEvent} onClose={() => setActiveEventId(null)} />
+        ) : null}
+
+        <svg viewBox={`0 0 ${width} ${height}`} className="h-[220px] w-full overflow-visible">
           {[0.25, 0.5, 0.75].map((ratio) => {
             const y = 20 + ratio * (height - 32 - 20);
 
@@ -173,17 +281,84 @@ function ProbabilityHistoryChart({
             points={line}
           />
 
-          {coordinates.map((point) => (
-            <circle
-              key={point.label}
-              cx={point.x}
-              cy={point.y}
-              r="5"
-              fill="white"
-              stroke="rgba(41, 91, 255, 0.95)"
-              strokeWidth="3"
-            />
-          ))}
+          {coordinates.map((point) => {
+            const event = eventsByPoint.get(point.label);
+            const isHovered = hoveredLabel === point.label;
+
+            return (
+              <g key={point.label}>
+                {/* Larger invisible hit area for easier hover/click */}
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r="14"
+                  fill="transparent"
+                  onMouseEnter={() => setHoveredLabel(point.label)}
+                  onMouseLeave={() => setHoveredLabel((current) => (current === point.label ? null : current))}
+                  onClick={() => {
+                    if (event) {
+                      setActiveEventId((current) => (current === event.id ? null : event.id));
+                    }
+                  }}
+                  className={event ? "cursor-pointer" : "cursor-default"}
+                />
+
+                {event ? (
+                  <>
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r={isHovered || activeEventId === event.id ? "10" : "8.5"}
+                      fill="rgba(245, 158, 11, 0.16)"
+                      stroke="rgba(217, 119, 6, 0.9)"
+                      strokeWidth="2"
+                      className="pointer-events-none transition-all"
+                    />
+                    <text
+                      x={point.x}
+                      y={point.y - 16}
+                      fill="rgba(180, 83, 9, 0.95)"
+                      fontSize="9.5"
+                      fontWeight="600"
+                      textAnchor="middle"
+                      className="pointer-events-none select-none"
+                    >
+                      ★
+                    </text>
+                  </>
+                ) : null}
+
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r={isHovered ? "6.5" : "5"}
+                  fill="white"
+                  stroke="rgba(41, 91, 255, 0.95)"
+                  strokeWidth="3"
+                  className="pointer-events-none transition-all"
+                />
+
+                {isHovered ? (
+                  <g className="pointer-events-none">
+                    <rect
+                      x={point.x - 46}
+                      y={point.y - 46}
+                      width="92"
+                      height="34"
+                      rx="8"
+                      fill="rgba(15, 23, 42, 0.95)"
+                    />
+                    <text x={point.x} y={point.y - 30} fill="white" fontSize="10" textAnchor="middle" fontWeight="600">
+                      {point.label}
+                    </text>
+                    <text x={point.x} y={point.y - 17} fill="rgba(226, 232, 240, 0.95)" fontSize="10" textAnchor="middle">
+                      {point.probability}% probability
+                    </text>
+                  </g>
+                ) : null}
+              </g>
+            );
+          })}
 
           {coordinates.map((point, index) => (
             <text
@@ -206,6 +381,14 @@ function ProbabilityHistoryChart({
           </text>
         </svg>
       </div>
+
+      {showEvents ? (
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          <span className="mr-1 text-amber-600">★</span>
+          Click a highlighted marker to see the fictional demo analysis behind that move. Hover any
+          point for its date and probability.
+        </p>
+      ) : null}
 
       <p className="mt-4 text-sm leading-6 text-slate-600">
         {experience === "intelligence" ? (
