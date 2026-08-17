@@ -1115,10 +1115,228 @@ function AskThisMarket({
 
 
 
+function OnboardingModal({
+  outcome,
+  onClose,
+  onComplete,
+}: {
+  outcome: Outcome;
+  onClose: () => void;
+  onComplete: (amount: number) => void;
+}) {
+  type Step = "identity" | "amount" | "payment" | "done";
+  const [step, setStep] = useState<Step>("identity");
+  const [amount, setAmount] = useState<number | null>(null);
+  const [customAmount, setCustomAmount] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
+
+  const identityOptions = [
+    { id: "apple", label: "Continue with Apple", icon: "" },
+    { id: "google", label: "Continue with Google", icon: "G" },
+    { id: "email", label: "Continue with Email", icon: "@" },
+  ];
+
+  const paymentOptions = [
+    { id: "apple-pay", label: "Apple Pay" },
+    { id: "debit", label: "Debit Card" },
+    { id: "usdc", label: "USDC" },
+  ];
+
+  function chooseAmount(value: number) {
+    setAmount(value);
+    setShowCustomInput(false);
+  }
+
+  function confirmCustomAmount() {
+    const parsed = Math.max(1, Math.round(Number.parseFloat(customAmount) || 0));
+    if (parsed > 0) {
+      setAmount(parsed);
+      setShowCustomInput(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Start trading"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-sm overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+            {outcome.label}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-sm text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="px-6 py-6">
+          {step === "identity" ? (
+            <div>
+              <h3 className="text-lg font-semibold text-slate-950">Get started</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                No wallet setup required. Sign in the way you already do everywhere else.
+              </p>
+              <div className="mt-5 space-y-2.5">
+                {identityOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setStep("amount")}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-white">
+                      {option.icon}
+                    </span>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-5 text-center text-[11px] leading-4 text-slate-400">
+                Demo only. No account is created and nothing is sent to Apple, Google, or email.
+              </p>
+            </div>
+          ) : null}
+
+          {step === "amount" ? (
+            <div>
+              <h3 className="text-lg font-semibold text-slate-950">How much would you like to trade?</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Buying YES on &ldquo;{outcome.label}&rdquo; at {formatCents(outcome.yesPrice)}.
+              </p>
+              <div className="mt-5 grid grid-cols-2 gap-2.5">
+                {[10, 25, 50].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => chooseAmount(preset)}
+                    className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${
+                      amount === preset && !showCustomInput
+                        ? "border-blue-600 bg-blue-50 text-blue-800"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    ${preset}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setShowCustomInput(true)}
+                  className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${
+                    showCustomInput
+                      ? "border-blue-600 bg-blue-50 text-blue-800"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                  }`}
+                >
+                  Custom
+                </button>
+              </div>
+
+              {showCustomInput ? (
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="flex flex-1 items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 focus-within:border-slate-400">
+                    <span className="text-sm font-semibold text-slate-400">$</span>
+                    <input
+                      autoFocus
+                      type="number"
+                      min={1}
+                      inputMode="decimal"
+                      value={customAmount}
+                      onChange={(event) => setCustomAmount(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") confirmCustomAmount();
+                      }}
+                      placeholder="Enter amount"
+                      className="ml-2 w-full bg-transparent text-sm font-semibold text-slate-950 outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={confirmCustomAmount}
+                    className="rounded-2xl bg-slate-950 px-3.5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    Set
+                  </button>
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                disabled={amount === null}
+                onClick={() => setStep("payment")}
+                className="mt-5 w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Continue{amount ? ` with $${amount}` : ""}
+              </button>
+            </div>
+          ) : null}
+
+          {step === "payment" ? (
+            <div>
+              <h3 className="text-lg font-semibold text-slate-950">How would you like to pay?</h3>
+              <p className="mt-1 text-sm text-slate-500">${amount} on &ldquo;{outcome.label}&rdquo;</p>
+              <div className="mt-5 space-y-2.5">
+                {paymentOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setStep("done")}
+                    className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    {option.label}
+                    <span className="text-slate-300">→</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-5 rounded-xl border border-violet-100 bg-violet-50 px-3.5 py-2.5 text-center text-xs font-medium text-violet-700">
+                Wallet infrastructure handled automatically.
+              </p>
+            </div>
+          ) : null}
+
+          {step === "done" ? (
+            <div className="py-2 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+                <span className="text-2xl text-emerald-600">✓</span>
+              </div>
+              <h3 className="mt-4 text-xl font-semibold text-slate-950">You&rsquo;re ready to trade.</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                ${amount} is set on &ldquo;{outcome.label}&rdquo;. No wallet, keys, or gas fees required.
+              </p>
+              <button
+                type="button"
+                onClick={() => onComplete(amount ?? 0)}
+                className="mt-6 w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+              >
+                Done
+              </button>
+              <p className="mt-4 text-[11px] leading-4 text-slate-400">
+                Demo only. No real account, payment, or trade was created.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TradingPanel({ outcome }: { outcome: Outcome }) {
   const [side, setSide] = useState<"YES" | "NO">("YES");
   const [amountInput, setAmountInput] = useState("10");
   const [confirmed, setConfirmed] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [onboarded, setOnboarded] = useState(false);
 
   const amount = Math.max(0, Number.parseFloat(amountInput) || 0);
   const price = side === "YES" ? outcome.yesPrice : outcome.noPrice;
@@ -1129,6 +1347,14 @@ function TradingPanel({ outcome }: { outcome: Outcome }) {
   function handlePresetAmount(value: number) {
     setAmountInput(String(value));
     setConfirmed(false);
+  }
+
+  function handlePrimaryAction() {
+    if (!onboarded) {
+      setOnboardingOpen(true);
+      return;
+    }
+    setConfirmed(true);
   }
 
   return (
@@ -1227,21 +1453,46 @@ function TradingPanel({ outcome }: { outcome: Outcome }) {
         </div>
       </div>
 
-      <button
-        type="button"
-        disabled={amount <= 0}
-        onClick={() => setConfirmed(true)}
-        className={`mt-5 w-full rounded-2xl px-5 py-3.5 text-sm font-semibold text-white shadow-sm ${
-          side === "YES" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-rose-500 hover:bg-rose-600"
-        } disabled:cursor-not-allowed disabled:opacity-40`}
-      >
-        {confirmed ? "Previewed — no real trade placed" : `Preview Buy ${side} for ${formatMoney(amount || 0)}`}
-      </button>
+      {!onboarded ? (
+        <button
+          type="button"
+          disabled={amount <= 0}
+          onClick={handlePrimaryAction}
+          className="mt-5 w-full rounded-2xl bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Trade This Market
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={amount <= 0}
+          onClick={handlePrimaryAction}
+          className={`mt-5 w-full rounded-2xl px-5 py-3.5 text-sm font-semibold text-white shadow-sm ${
+            side === "YES" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-rose-500 hover:bg-rose-600"
+          } disabled:cursor-not-allowed disabled:opacity-40`}
+        >
+          {confirmed ? "Previewed — no real trade placed" : `Preview Buy ${side} for ${formatMoney(amount || 0)}`}
+        </button>
+      )}
 
       <p className="mt-3 text-center text-xs leading-5 text-slate-400">
         Demo only. This button does not execute a real transaction, move real money, or connect to a
         wallet.
       </p>
+
+      {onboardingOpen ? (
+        <OnboardingModal
+          outcome={outcome}
+          onClose={() => setOnboardingOpen(false)}
+          onComplete={(chosenAmount) => {
+            setOnboarded(true);
+            setOnboardingOpen(false);
+            if (chosenAmount > 0) {
+              setAmountInput(String(chosenAmount));
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
