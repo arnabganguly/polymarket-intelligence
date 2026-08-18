@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type JSX } from "react";
+import { useMemo, useState, type JSX, type ReactNode } from "react";
 import Link from "next/link";
 import {
   askQuestions,
@@ -27,10 +27,27 @@ import {
   type OutcomeId,
   type SignalMetric,
 } from "@/lib/fed-rate-market";
+import { PILLARS, type PillarId } from "@/lib/pillars";
 
 type Experience = "current" | "intelligence";
 
-function InfoTooltip({ text, label = "More information" }: { text: string; label?: string }) {
+const TOOLTIP_ICON_TONE: Record<"neutral" | PillarId, string> = {
+  neutral: "border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700",
+  understand: "border-violet-300 text-violet-600 hover:border-violet-400 hover:text-violet-700",
+  participate: "border-blue-300 text-blue-600 hover:border-blue-400 hover:text-blue-700",
+  return: "border-teal-300 text-teal-600 hover:border-teal-400 hover:text-teal-700",
+  distribute: "border-indigo-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700",
+};
+
+function InfoTooltip({
+  text,
+  label = "More information",
+  tone = "neutral",
+}: {
+  text: string;
+  label?: string;
+  tone?: "neutral" | PillarId;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -43,20 +60,81 @@ function InfoTooltip({ text, label = "More information" }: { text: string; label
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onClick={() => setOpen((value) => !value)}
-        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-slate-300 text-[10px] font-semibold leading-none text-slate-500 outline-none hover:border-slate-400 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300"
+        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold leading-none outline-none focus-visible:ring-2 focus-visible:ring-slate-300 ${TOOLTIP_ICON_TONE[tone]}`}
       >
         i
       </button>
       {open ? (
         <span
           role="tooltip"
-          className="absolute bottom-full left-1/2 z-30 mb-2 w-56 -translate-x-1/2 rounded-xl border border-slate-200 bg-slate-950 px-3 py-2.5 text-xs leading-5 text-slate-100 shadow-xl"
+          className="absolute bottom-full left-1/2 z-30 mb-2 w-56 -translate-x-1/2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs leading-5 text-slate-900 shadow-xl"
         >
           {text}
-          <span className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1 rotate-45 bg-slate-950" />
+          <span className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1 rotate-45 border-b border-r border-slate-200 bg-white" />
         </span>
       ) : null}
     </span>
+  );
+}
+
+/** Small colored pill/eyebrow that identifies which of the four pillars a section belongs to. */
+function PillarBadge({ pillar }: { pillar: PillarId }) {
+  const s = PILLARS[pillar];
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border bg-white/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${s.border} ${s.text}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} aria-hidden />
+      {s.label}
+    </span>
+  );
+}
+
+/**
+ * Wraps a Polymarket+ feature group in its pillar's very light background wash,
+ * with a pillar badge + title + subtitle at the top. This is the visual unit
+ * that lets the audience recognize which of the four pillars a section belongs
+ * to within a few seconds.
+ */
+function PillarGroup({
+  pillar,
+  title,
+  subtitle,
+  badge,
+  tooltip,
+  id,
+  children,
+}: {
+  pillar: PillarId;
+  title: string;
+  subtitle: string;
+  badge?: string;
+  tooltip?: string;
+  id?: string;
+  children: ReactNode;
+}) {
+  const s = PILLARS[pillar];
+
+  return (
+    <section id={id} className={`rounded-[2rem] border ${s.border} ${s.wash} p-4 sm:p-5 lg:p-6`}>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <PillarBadge pillar={pillar} />
+          <div className="mt-2 flex items-center gap-1.5">
+            <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+            {tooltip ? <InfoTooltip text={tooltip} label={`About ${title}`} tone={pillar} /> : null}
+          </div>
+          <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+        </div>
+        {badge ? (
+          <span className={`rounded-full border bg-white/80 px-3 py-1 text-xs font-semibold ${s.border} ${s.text}`}>
+            {badge}
+          </span>
+        ) : null}
+      </div>
+      <div className="space-y-6">{children}</div>
+    </section>
   );
 }
 
@@ -66,7 +144,7 @@ function SectionHeading({
   subtitle,
   tooltip,
   badge,
-  badgeTone = "indigo",
+  badgeTone = "slate",
   id,
 }: {
   eyebrow?: string;
@@ -74,15 +152,14 @@ function SectionHeading({
   subtitle: string;
   tooltip?: string;
   badge?: string;
-  badgeTone?: "indigo" | "slate" | "blue";
+  badgeTone?: "slate" | PillarId;
   id?: string;
 }) {
   const badgeStyles =
     badgeTone === "slate"
       ? "border-slate-200 bg-slate-50 text-slate-500"
-      : badgeTone === "blue"
-        ? "border-blue-200 bg-blue-50 text-blue-700"
-        : "border-indigo-200 bg-indigo-50 text-indigo-700";
+      : `${PILLARS[badgeTone].border} bg-white/80 ${PILLARS[badgeTone].text}`;
+  const tooltipTone = badgeTone === "slate" ? "neutral" : badgeTone;
 
   return (
     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -90,7 +167,7 @@ function SectionHeading({
         {eyebrow ? <p className="text-sm font-medium text-slate-500">{eyebrow}</p> : null}
         <div className={`flex items-center gap-1.5 ${eyebrow ? "mt-1" : ""}`}>
           <h2 className="text-xl font-semibold text-slate-950">{title}</h2>
-          {tooltip ? <InfoTooltip text={tooltip} label={`About ${title}`} /> : null}
+          {tooltip ? <InfoTooltip text={tooltip} label={`About ${title}`} tone={tooltipTone} /> : null}
         </div>
         <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
       </div>
@@ -574,7 +651,7 @@ function ExperienceToggle({
           {(
             [
               { id: "current" as const, label: "Current Experience" },
-              { id: "intelligence" as const, label: "Intelligent Experience" },
+              { id: "intelligence" as const, label: "Polymarket+" },
             ]
           ).map((option) => {
             const active = option.id === experience;
@@ -595,32 +672,11 @@ function ExperienceToggle({
         </div>
       </div>
 
-      <div
-        className={`grid transition-[grid-template-rows] duration-500 ease-out ${
-          isIntelligence ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2 border-t border-slate-100 bg-slate-50/60 px-5 py-4 text-center">
-            {[
-              "What does the market believe?",
-              "Why?",
-              "How strong is the signal?",
-              "What could change it?",
-            ].map((term, index) => (
-              <span key={term} className="flex items-center gap-2.5">
-                {index > 0 ? <span className="text-sm font-semibold text-slate-300">+</span> : null}
-                <span
-                  className="thesis-term-in rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 sm:text-sm"
-                  style={{ animationDelay: `${index * 90}ms` }}
-                >
-                  {term}
-                </span>
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      {isIntelligence ? (
+        <p className="border-t border-slate-100 bg-slate-50/60 px-5 py-2 text-center text-xs font-medium text-slate-600">
+          Understand. Participate. Stay ahead. Distribute.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -687,6 +743,7 @@ function WhyMovingCard() {
         subtitle="Explains what may have caused the probability to change."
         tooltip="This connects probability changes to the real-world information traders may be reacting to. Instead of only seeing that the market moved, users can understand what may have changed expectations."
         badge="Prototype analysis · fictional example"
+        badgeTone="understand"
       />
 
       <p className="text-sm leading-6 text-slate-600">{movingSummary}</p>
@@ -726,7 +783,9 @@ function SignalMetricRow({ metric }: { metric: SignalMetric }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <p className="text-sm font-medium text-slate-600">{metric.label}</p>
-          {metric.tooltip ? <InfoTooltip text={metric.tooltip} label={`About ${metric.label}`} /> : null}
+          {metric.tooltip ? (
+            <InfoTooltip text={metric.tooltip} label={`About ${metric.label}`} tone="understand" />
+          ) : null}
         </div>
         <div className="text-right">
           <p className="text-sm font-semibold text-slate-950">{metric.value}</p>
@@ -754,6 +813,7 @@ function SignalQualityCard() {
         subtitle="Shows how strong the market behind the probability is."
         tooltip={signalQualityExplainer}
         badge="Prototype analysis · fictional example"
+        badgeTone="understand"
       />
 
       <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
@@ -915,6 +975,7 @@ function CatalystTimelineCard() {
         subtitle="Highlights upcoming events that could change the probability."
         tooltip="This shows upcoming events that could materially change trader expectations and therefore move the market probability."
         badge="Demonstration data · fictional dates"
+        badgeTone="understand"
       />
 
       <p className="text-sm leading-6 text-slate-600">
@@ -957,7 +1018,11 @@ function IntelligenceLayerSection({
   ];
 
   return (
-    <div className="space-y-6">
+    <PillarGroup
+      pillar="understand"
+      title="Market Intelligence"
+      subtitle="Turn probability into context."
+    >
       {showWhyThisMatters ? (
         <WhyThisMattersNote text="Expands the product beyond expert traders." />
       ) : null}
@@ -966,7 +1031,7 @@ function IntelligenceLayerSection({
           {card.render()}
         </div>
       ))}
-    </div>
+    </PillarGroup>
   );
 }
 
@@ -1099,7 +1164,7 @@ function AskThisMarket({
         subtitle="Ask questions about the prediction in plain English."
         tooltip="This lets users interrogate the market in natural language. Instead of interpreting charts and trading terminology themselves, users can ask simple questions about what is happening."
         badge="Pre-written demo answers"
-        badgeTone="slate"
+        badgeTone="understand"
       />
 
       <p className="mb-4 text-sm leading-6 text-slate-600">
@@ -1115,7 +1180,7 @@ function AskThisMarket({
             onClick={() => setActiveId((current) => (current === q.id ? null : q.id))}
             className={`rounded-full border px-3.5 py-2 text-left text-sm font-medium transition-colors ${
               activeId === q.id
-                ? "border-blue-600 bg-blue-600 text-white"
+                ? "border-violet-600 bg-violet-600 text-white"
                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
             }`}
           >
@@ -1126,7 +1191,7 @@ function AskThisMarket({
 
       {active ? (
         <div className="fade-in-up mt-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-violet-700">
             {active.question}
           </p>
           <div className="mt-3 space-y-3 text-sm leading-6 text-slate-700">
@@ -1146,7 +1211,7 @@ function AskThisMarket({
     </div>
   );
 }
-type AutomationRuleId = "take-profit" | "protect-position" | "smart-alert";
+type AutomationRuleId = "target-sell" | "protect-position" | "smart-alert";
 
 type AutomationRule = {
   id: AutomationRuleId;
@@ -1155,59 +1220,68 @@ type AutomationRule = {
   supporting: string;
   status: string;
   tooltip: string;
+  badge: string;
+  badgeTone: "slate" | "return";
+  /** Only shown in Polymarket+; Current Experience only ever shows the existing Target Sell control. */
+  isExisting: boolean;
 };
 
 const automationRules: AutomationRule[] = [
   {
-    id: "take-profit",
-    title: "Take Profit",
-    description: "Sell if probability reaches 75%",
-    supporting: "Lock in upside",
-    status: "Take profit at 75%",
+    id: "target-sell",
+    title: "Target Sell",
+    description: "Sell YES at 75¢",
+    supporting: "Set a limit order at your target price.",
+    status: "Limit sell order set at 75¢",
     tooltip:
-      "This lets a user define a target in advance. If the market reaches that level, Polymarket can attempt to sell the position automatically instead of requiring constant monitoring.",
+      "Polymarket already allows users to sell an existing position using a limit order. The order can remain open until another trader is willing to buy at the specified price.",
+    badge: "Existing",
+    badgeTone: "slate",
+    isExisting: true,
   },
   {
     id: "protect-position",
     title: "Protect Position",
-    description: "Sell if probability falls below 35%",
-    supporting: "Limit downside",
+    description: "Exit if probability falls below 35%",
+    supporting: "Limit downside automatically.",
     status: "Protect position below 35%",
     tooltip:
       "This helps users limit downside by defining a probability level at which they want to exit if the market moves against their position.",
+    badge: "Polymarket+ Concept",
+    badgeTone: "return",
+    isExisting: false,
   },
   {
     id: "smart-alert",
     title: "Smart Alert",
-    description: "Notify me if probability moves ±10 points",
-    supporting: "Know when something meaningful changes",
+    description: "Notify me if probability moves ±10 pts",
+    supporting: "Know when something meaningful changes.",
     status: "Alert on ±10 point move",
     tooltip:
       "This watches the market for meaningful probability changes and brings the user back only when something important happens.",
+    badge: "Polymarket+ Concept",
+    badgeTone: "return",
+    isExisting: false,
   },
 ];
 
 function LiveMarketsSection({
+  experience,
   onViewIntelligence,
   showWhyThisMatters = false,
 }: {
+  experience: Experience;
   onViewIntelligence: () => void;
   showWhyThisMatters?: boolean;
 }) {
   const position = getOutcome("cut-25");
   const [activeRuleId, setActiveRuleId] = useState<AutomationRuleId | null>(null);
-  const activeRule = activeRuleId ? automationRules.find((rule) => rule.id === activeRuleId) ?? null : null;
+  const isIntelligence = experience === "intelligence";
+  const visibleRules = isIntelligence ? automationRules : automationRules.filter((rule) => rule.isExisting);
+  const activeRule = activeRuleId ? visibleRules.find((rule) => rule.id === activeRuleId) ?? null : null;
 
-  return (
-    <div id="stay-ahead" className="card-surface rounded-3xl p-5 lg:p-6">
-      <SectionHeading
-        eyebrow="Stay Ahead As The Market Moves"
-        title="Set your strategy once. Polymarket helps you react as probabilities change."
-        subtitle="Creates reasons to return as markets evolve, without requiring you to watch constantly."
-        badge="Demo Market · fictional data"
-        badgeTone="blue"
-      />
-
+  const body = (
+    <>
       <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
           Your Position
@@ -1215,13 +1289,16 @@ function LiveMarketsSection({
         <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
           <p className="text-lg font-semibold text-slate-950">{position.label}</p>
           <p className="text-sm text-slate-600">
-            Current probability: <span className="font-semibold text-blue-700">{position.probability}%</span>
+            Current probability:{" "}
+            <span className={`font-semibold ${isIntelligence ? "text-teal-700" : "text-slate-900"}`}>
+              {position.probability}%
+            </span>
           </p>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
-        {automationRules.map((rule) => {
+      <div className={`mt-5 grid gap-2.5 ${visibleRules.length > 1 ? "sm:grid-cols-3" : "sm:max-w-sm"}`}>
+        {visibleRules.map((rule) => {
           const active = activeRuleId === rule.id;
 
           return (
@@ -1242,16 +1319,29 @@ function LiveMarketsSection({
                   : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
               }`}
             >
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-semibold">{rule.title}</p>
-                <span onClick={(event) => event.stopPropagation()}>
-                  <InfoTooltip text={rule.tooltip} label={`About ${rule.title}`} />
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-semibold">{rule.title}</p>
+                  <span onClick={(event) => event.stopPropagation()}>
+                    <InfoTooltip text={rule.tooltip} label={`About ${rule.title}`} tone="return" />
+                  </span>
+                </div>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${
+                    active
+                      ? "border-white/30 text-white/80"
+                      : rule.badgeTone === "slate"
+                        ? "border-slate-200 bg-slate-50 text-slate-500"
+                        : "border-teal-200 bg-teal-50 text-teal-700"
+                  }`}
+                >
+                  {rule.badge}
                 </span>
               </div>
               <p className={`mt-1 text-xs leading-5 ${active ? "text-slate-300" : "text-slate-500"}`}>
                 &ldquo;{rule.description}&rdquo;
               </p>
-              <p className={`mt-2 text-[11px] font-medium uppercase tracking-[0.1em] ${active ? "text-slate-400" : "text-blue-600"}`}>
+              <p className={`mt-2 text-[11px] font-medium ${active ? "text-slate-400" : "text-slate-500"}`}>
                 {rule.supporting}
               </p>
             </div>
@@ -1269,93 +1359,130 @@ function LiveMarketsSection({
         </div>
       ) : (
         <p className="mt-4 text-xs leading-5 text-slate-400">
-          Select a control above to see how automation would respond as this probability changes —
-          no real order is placed.
+          Select a control above to see how it would respond as this probability changes — no real
+          order is placed.
         </p>
       )}
 
-      <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50/50 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
-            Market Moved +10 pts
-          </p>
-          <span className="rounded-full border border-blue-200 bg-white px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-            Example notification
-          </span>
-        </div>
-        <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-950">57% → 67%</p>
-
-        <div className="mt-3 space-y-2">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Why</p>
-            <p className="mt-0.5 text-sm leading-6 text-slate-700">
-              Weaker-than-expected employment data increased expectations of a Fed cut.
+      {isIntelligence ? (
+        <div className="mt-6 rounded-2xl border border-teal-200 bg-[#F0FBF8] p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-teal-700">
+              Market Moved +10 pts
             </p>
+            <span className="rounded-full border border-teal-200 bg-white px-2.5 py-0.5 text-xs font-semibold text-teal-700">
+              Example notification
+            </span>
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
-              Your position
-            </p>
-            <p className="mt-0.5 text-sm font-semibold text-emerald-700">+16%</p>
-          </div>
-        </div>
+          <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-950">57% → 67%</p>
 
-        <button
-          type="button"
-          onClick={onViewIntelligence}
-          className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-blue-700 transition-colors hover:text-blue-800"
-        >
-          View Intelligence <span aria-hidden>→</span>
-        </button>
-      </div>
+          <div className="mt-3 space-y-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Why</p>
+              <p className="mt-0.5 text-sm leading-6 text-slate-700">
+                Weaker-than-expected employment data increased expectations of a Fed cut.
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
+                Your position
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-emerald-700">+16%</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onViewIntelligence}
+            className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-violet-700 transition-colors hover:text-violet-800"
+          >
+            View Intelligence <span aria-hidden>→</span>
+          </button>
+        </div>
+      ) : null}
 
       <p className="mt-4 text-xs leading-5 text-slate-400">
-        Prototype concept only. This does not place, monitor, or execute a real trade — it
-        illustrates how Polymarket could let users respond to a market automatically instead of
-        checking it constantly.
+        {isIntelligence
+          ? "Prototype concept only. Protect Position and Smart Alert do not place, monitor, or execute a real trade — they illustrate how Polymarket+ could let users respond to a market automatically instead of checking it constantly."
+          : "Set a limit order at your target price. The order can remain open until another trader is willing to buy at the specified price."}
       </p>
 
       {showWhyThisMatters ? (
-        <WhyThisMattersNote text="Creates reasons to return as markets evolve." />
+        <WhyThisMattersNote pillar="return" text="Creates reasons to return as markets evolve." />
       ) : null}
+    </>
+  );
+
+  if (isIntelligence) {
+    return (
+      <PillarGroup
+        id="stay-ahead"
+        pillar="return"
+        title="Stay Ahead As The Market Moves"
+        subtitle="Stay engaged without constantly watching the market."
+        badge="Demo Market · fictional data"
+      >
+        {body}
+      </PillarGroup>
+    );
+  }
+
+  return (
+    <div id="stay-ahead" className="card-surface rounded-3xl p-5 lg:p-6">
+      <SectionHeading
+        title="Target Sell"
+        subtitle="Set a limit order at your target price."
+        tooltip="Polymarket already allows users to sell an existing position using a limit order. The order can remain open until another trader is willing to buy at the specified price."
+        badge="Existing"
+        badgeTone="slate"
+      />
+      {body}
     </div>
   );
 }
 
-function WhyThisMattersNote({ text }: { text: string }) {
+function WhyThisMattersNote({ text, pillar = "understand" }: { text: string; pillar?: PillarId }) {
+  const s = PILLARS[pillar];
+
   return (
-    <p className="mt-4 inline-flex items-start gap-1.5 rounded-xl border border-purple-200 bg-purple-50/70 px-3 py-2 text-xs leading-5 text-purple-800">
-      <span className="font-semibold uppercase tracking-[0.08em] text-purple-600">Why this matters:</span>{" "}
+    <p className={`mt-4 inline-flex items-start gap-1.5 rounded-xl border px-3 py-2 text-xs leading-5 ${s.border} ${s.wash} text-slate-700`}>
+      <span className={`font-semibold uppercase tracking-[0.08em] ${s.text}`}>Why this matters:</span>{" "}
       {text}
     </p>
   );
 }
 
-const oneClickSteps = ["Understand", "Choose YES / NO", "$20", "Apple Pay / Card", "Done"];
+const oneClickSteps: Array<{ label: string; tone: "neutral" | "participate" | "success" }> = [
+  { label: "Understand", tone: "neutral" },
+  { label: "Choose YES / NO", tone: "participate" },
+  { label: "$20", tone: "participate" },
+  { label: "Apple Pay / Card", tone: "participate" },
+  { label: "Done", tone: "success" },
+];
 
 function OneClickAccessSection({ showWhyThisMatters = false }: { showWhyThisMatters?: boolean }) {
   return (
-    <div id="one-click-access" className="card-surface rounded-3xl p-5 lg:p-6">
-      <SectionHeading
-        eyebrow="Participate"
-        title="One-Click Access"
-        subtitle="Move from understanding to participation with minimal friction."
-        tooltip="The goal is to make participation feel like a mainstream financial or consumer product. Wallet and blockchain complexity stays in the background while the user focuses on the decision."
-        badge="Concept only"
-        badgeTone="slate"
-      />
-
+    <PillarGroup
+      id="one-click-access"
+      pillar="participate"
+      title="One-Click Access"
+      subtitle="Move from conviction to action."
+      badge="Concept only"
+      tooltip="The goal is to make participation feel like a mainstream financial or consumer product. Wallet and blockchain complexity stays in the background while the user focuses on the decision."
+    >
       <div className="flex flex-wrap items-center gap-2">
         {oneClickSteps.map((step, index) => (
-          <div key={step} className="flex items-center gap-2">
+          <div key={step.label} className="flex items-center gap-2">
             <span
               className={`rounded-full border px-3.5 py-2 text-sm font-semibold ${
-                index === oneClickSteps.length - 1
+                step.tone === "success"
                   ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                  : "border-slate-200 bg-white text-slate-800"
+                  : step.tone === "participate"
+                    ? "border-blue-200 bg-white text-blue-800"
+                    : "border-slate-200 bg-white text-slate-800"
               }`}
             >
-              {step}
+              {step.label}
             </span>
             {index < oneClickSteps.length - 1 ? <span className="text-slate-300">→</span> : null}
           </div>
@@ -1368,9 +1495,9 @@ function OneClickAccessSection({ showWhyThisMatters = false }: { showWhyThisMatt
       </p>
 
       {showWhyThisMatters ? (
-        <WhyThisMattersNote text="Removes friction after a user develops conviction." />
+        <WhyThisMattersNote pillar="participate" text="Removes friction after a user develops conviction." />
       ) : null}
-    </div>
+    </PillarGroup>
   );
 }
 
@@ -1381,30 +1508,26 @@ type DistributionSurface = {
 };
 
 const distributionSurfaces: DistributionSurface[] = [
-  { id: "news", label: "News", detail: "\u201cMarkets imply a 57% chance of a 25 bps cut.\u201d" },
-  { id: "media", label: "Media", detail: "Embeddable probability widget on any article." },
-  { id: "api", label: "API", detail: "GET /probability/fed-rate-decision → 57%" },
-  { id: "ai", label: "AI", detail: "Agents query live probability as structured data." },
+  { id: "media", label: "Media", detail: "\u201cMarkets imply a 57% chance of a 25 bps cut.\u201d" },
+  { id: "widgets", label: "Widgets", detail: "Embeddable probability widget on any site or app." },
+  { id: "intelligence-api", label: "Intelligence API", detail: "Structured probability + context, not just a price." },
+  { id: "ai", label: "AI", detail: "Agents query probability and context as structured data." },
 ];
 
 function ProbabilityEverywhereSection({ showWhyThisMatters = false }: { showWhyThisMatters?: boolean }) {
-  const position = getOutcome("cut-25");
-
   return (
-    <div id="probability-everywhere" className="card-surface rounded-3xl p-5 lg:p-6">
-      <SectionHeading
-        eyebrow="Distribute"
-        title="Probability Everywhere"
-        subtitle="Bring Polymarket intelligence to the places users already consume information."
-        tooltip="This allows Polymarket probabilities and intelligence to appear inside news, media, APIs and other products instead of requiring every user to visit Polymarket directly."
-        badge="Concept only"
-        badgeTone="slate"
-      />
-
+    <PillarGroup
+      id="probability-everywhere"
+      pillar="distribute"
+      title="Intelligence Everywhere"
+      subtitle="Bring the signal to where users already are."
+      badge="Concept only"
+      tooltip="This allows Polymarket probabilities and intelligence to appear inside news, media, APIs and other products instead of requiring every user to visit Polymarket directly. The API itself already exists — Polymarket+ extends what it returns."
+    >
       <div className="grid gap-3 sm:grid-cols-4">
         {distributionSurfaces.map((surface) => (
           <div key={surface.id} className="rounded-2xl border border-slate-200 bg-white/90 p-3.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-700">
               {surface.label}
             </p>
             <p className="mt-2 text-xs leading-5 text-slate-600">{surface.detail}</p>
@@ -1412,30 +1535,52 @@ function ProbabilityEverywhereSection({ showWhyThisMatters = false }: { showWhyT
         ))}
       </div>
 
-      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-950 p-4 text-white">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-          Example widget
+      <div className="mt-5">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-700">
+          Conceptual Intelligence API
         </p>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-medium text-slate-200">Fed rate decision — 25 bps cut</p>
-          <p className="text-2xl font-semibold text-emerald-400">{position.probability}%</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-slate-950 p-4 text-white">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Today</p>
+            <pre className="mt-2 overflow-x-auto text-xs leading-6 text-slate-200">{`{
+  "probability": 0.57
+}`}</pre>
+          </div>
+          <div className="rounded-2xl border border-indigo-400/40 bg-slate-950 p-4 text-white">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-300">
+              Polymarket+
+            </p>
+            <pre className="mt-2 overflow-x-auto text-xs leading-6 text-slate-200">{`{
+  "probability": 0.57,
+  "change": "+0.08",
+  "drivers": ["employment_data"],
+  "signal_quality": "strong",
+  "next_catalyst": "CPI"
+}`}</pre>
+          </div>
         </div>
-        <p className="mt-1 text-[11px] text-slate-500">Powered by Polymarket Intelligence · Demo widget</p>
+        <p className="mt-2 text-[11px] text-slate-400">Powered by Polymarket Intelligence · Demo widget</p>
       </div>
 
       <p className="mt-4 text-xs leading-5 text-slate-400">
         Prototype concept only. These surfaces are illustrative mockups and do not connect to real
-        news, media, or developer platforms.
+        news, media, or developer platforms. Polymarket already exposes market data via API today —
+        this concept only illustrates enriching that response, not introducing APIs as new.
       </p>
 
       {showWhyThisMatters ? (
-        <WhyThisMattersNote text="Turns distribution into an acquisition engine." />
+        <WhyThisMattersNote pillar="distribute" text="Turns distribution into an acquisition engine." />
       ) : null}
-    </div>
+    </PillarGroup>
   );
 }
 
-const presentationVisionStages = ["Understand", "Participate", "Return", "Distribute"];
+const presentationVisionStages: Array<{ label: string; pillar: PillarId }> = [
+  { label: "Understand", pillar: "understand" },
+  { label: "Participate", pillar: "participate" },
+  { label: "Return", pillar: "return" },
+  { label: "Distribute", pillar: "distribute" },
+];
 
 function PresentationVisionSummary() {
   return (
@@ -1449,18 +1594,21 @@ function PresentationVisionSummary() {
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        {presentationVisionStages.map((stage, index) => (
-          <div key={stage} className="flex items-center gap-2">
-            <span className="rounded-full border border-blue-200 bg-blue-50 px-3.5 py-2 text-sm font-semibold text-blue-800">
-              {stage}
-            </span>
-            {index < presentationVisionStages.length - 1 ? (
-              <span className="text-slate-300">→</span>
-            ) : (
-              <span className="text-slate-300">→ Understand</span>
-            )}
-          </div>
-        ))}
+        {presentationVisionStages.map((stage, index) => {
+          const s = PILLARS[stage.pillar];
+          return (
+            <div key={stage.label} className="flex items-center gap-2">
+              <span className={`rounded-full border px-3.5 py-2 text-sm font-semibold ${s.border} ${s.wash} ${s.text}`}>
+                {stage.label}
+              </span>
+              {index < presentationVisionStages.length - 1 ? (
+                <span className="text-slate-300">→</span>
+              ) : (
+                <span className="text-slate-300">→ Understand</span>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="mt-5 rounded-2xl border border-purple-200 bg-purple-50/60 p-4 text-center">
@@ -1703,15 +1851,18 @@ function OnboardingModal({
 }
 
 function TradingPanel({ outcome }: { outcome: Outcome }) {
+  const [mode, setMode] = useState<"BUY" | "SELL">("BUY");
   const [side, setSide] = useState<"YES" | "NO">("YES");
+  const [orderType, setOrderType] = useState<"MARKET" | "LIMIT">("MARKET");
   const [amountInput, setAmountInput] = useState("10");
+  const [limitPriceInput, setLimitPriceInput] = useState("75");
   const [confirmed, setConfirmed] = useState(false);
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
-  const [onboarded, setOnboarded] = useState(false);
 
   const amount = Math.max(0, Number.parseFloat(amountInput) || 0);
-  const price = side === "YES" ? outcome.yesPrice : outcome.noPrice;
-  const shares = price > 0 ? amount / price : 0;
+  const marketPriceCents = Math.round((side === "YES" ? outcome.yesPrice : outcome.noPrice) * 100);
+  const limitPrice = Math.max(1, Math.min(99, Math.round(Number.parseFloat(limitPriceInput) || 0)));
+  const priceCents = orderType === "LIMIT" ? limitPrice : marketPriceCents;
+  const shares = priceCents > 0 ? amount / (priceCents / 100) : 0;
   const payout = shares * 1;
   const profit = payout - amount;
 
@@ -1720,49 +1871,147 @@ function TradingPanel({ outcome }: { outcome: Outcome }) {
     setConfirmed(false);
   }
 
-  function handlePrimaryAction() {
-    if (!onboarded) {
-      setOnboardingOpen(true);
-      return;
-    }
-    setConfirmed(true);
+  function resetOnChange() {
+    setConfirmed(false);
   }
 
   return (
     <div className="card-surface rounded-3xl p-5 lg:sticky lg:top-6 lg:p-6">
-      <div className="mb-4">
-        <p className="text-sm font-medium text-slate-500">Trade this outcome</p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-950">{outcome.label}</h2>
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium text-slate-500">Trade this outcome</p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-950">{outcome.label}</h2>
+        </div>
+        <span className="mt-0.5 shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          Current
+        </span>
       </div>
 
       <div className="flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
         <button
           type="button"
           onClick={() => {
+            setMode("BUY");
+            resetOnChange();
+          }}
+          className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+            mode === "BUY" ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:text-slate-950"
+          }`}
+        >
+          Buy
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode("SELL");
+            resetOnChange();
+          }}
+          className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+            mode === "SELL" ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:text-slate-950"
+          }`}
+        >
+          Sell
+        </button>
+      </div>
+
+      <div className="mt-3 flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
+        <button
+          type="button"
+          onClick={() => {
             setSide("YES");
-            setConfirmed(false);
+            resetOnChange();
           }}
           className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold ${
             side === "YES" ? "bg-emerald-500 text-white shadow-sm" : "text-slate-600 hover:text-slate-950"
           }`}
         >
-          Buy YES {formatCents(outcome.yesPrice)}
+          YES {formatCents(outcome.yesPrice)}
         </button>
         <button
           type="button"
           onClick={() => {
             setSide("NO");
-            setConfirmed(false);
+            resetOnChange();
           }}
           className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold ${
             side === "NO" ? "bg-rose-500 text-white shadow-sm" : "text-slate-600 hover:text-slate-950"
           }`}
         >
-          Buy NO {formatCents(outcome.noPrice)}
+          NO {formatCents(outcome.noPrice)}
         </button>
       </div>
 
-      <div className="mt-5">
+      <div className="mt-4">
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-medium text-slate-500">Order type</p>
+          <InfoTooltip
+            text="Set the price at which you are willing to buy or sell. The order remains available until it can be matched with another trader or is cancelled."
+            label="About limit orders"
+          />
+        </div>
+        <div className="mt-2 flex rounded-2xl border border-slate-200 bg-white/90 p-1">
+          <button
+            type="button"
+            onClick={() => {
+              setOrderType("MARKET");
+              resetOnChange();
+            }}
+            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+              orderType === "MARKET" ? "bg-slate-100 text-slate-950" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Market
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOrderType("LIMIT");
+              resetOnChange();
+            }}
+            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+              orderType === "LIMIT" ? "bg-slate-100 text-slate-950" : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            Limit
+          </button>
+        </div>
+
+        {orderType === "LIMIT" ? (
+          <div className="mt-3">
+            <label htmlFor="limit-price" className="text-xs font-medium text-slate-500">
+              Limit price
+            </label>
+            <div className="mt-1.5 flex items-center rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 focus-within:border-slate-400">
+              <input
+                id="limit-price"
+                type="number"
+                min={1}
+                max={99}
+                step={1}
+                inputMode="decimal"
+                value={limitPriceInput}
+                onChange={(event) => {
+                  setLimitPriceInput(event.target.value);
+                  resetOnChange();
+                }}
+                className="w-full bg-transparent text-sm font-semibold text-slate-950 outline-none"
+              />
+              <span className="text-sm font-semibold text-slate-400">¢</span>
+            </div>
+            {mode === "SELL" ? (
+              <p className="mt-2 text-xs leading-5 text-slate-400">
+                {`Sell ${side}, limit price ${limitPrice}¢ — the order fills automatically if the market reaches this price. This is how an existing holder can already set a target sale price.`}
+              </p>
+            ) : (
+              <p className="mt-2 text-xs leading-5 text-slate-400">
+                {`Buy ${side}, limit price ${limitPrice}¢ — the order fills automatically if the market reaches this price.`}
+              </p>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4">
         <label htmlFor="trade-amount" className="text-sm font-medium text-slate-500">
           Amount
         </label>
@@ -1777,7 +2026,7 @@ function TradingPanel({ outcome }: { outcome: Outcome }) {
             value={amountInput}
             onChange={(event) => {
               setAmountInput(event.target.value);
-              setConfirmed(false);
+              resetOnChange();
             }}
             className="ml-2 w-full bg-transparent text-lg font-semibold text-slate-950 outline-none"
             placeholder="0"
@@ -1800,70 +2049,60 @@ function TradingPanel({ outcome }: { outcome: Outcome }) {
 
       <div className="mt-5 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500">Price per share</span>
-          <span className="font-semibold text-slate-950">{formatCents(price)}</span>
+          <span className="text-slate-500">{orderType === "LIMIT" ? "Limit price" : "Price per share"}</span>
+          <span className="font-semibold text-slate-950">{priceCents}¢</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500">Shares received</span>
+          <span className="text-slate-500">{mode === "SELL" ? "Shares sold" : "Shares received"}</span>
           <span className="font-semibold text-slate-950">{shares.toFixed(2)}</span>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500">Payout if {side} is correct</span>
-          <span className="font-semibold text-emerald-600">{formatMoney(payout)}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500">Profit if {side} is correct</span>
-          <span className={`font-semibold ${profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-            {profit >= 0 ? "+" : ""}
-            {formatMoney(profit)}
-          </span>
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500">Max loss if wrong</span>
-          <span className="font-semibold text-rose-600">-{formatMoney(amount)}</span>
-        </div>
+        {mode === "BUY" ? (
+          <>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500">Payout if {side} is correct</span>
+              <span className="font-semibold text-emerald-600">{formatMoney(payout)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500">Profit if {side} is correct</span>
+              <span className={`font-semibold ${profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                {profit >= 0 ? "+" : ""}
+                {formatMoney(profit)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500">Max loss if wrong</span>
+              <span className="font-semibold text-rose-600">-{formatMoney(amount)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500">Proceeds if filled</span>
+            <span className="font-semibold text-emerald-600">{formatMoney(amount)}</span>
+          </div>
+        )}
       </div>
 
-      {!onboarded ? (
-        <button
-          type="button"
-          disabled={amount <= 0}
-          onClick={handlePrimaryAction}
-          className="mt-5 w-full rounded-2xl bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Trade This Market
-        </button>
-      ) : (
-        <button
-          type="button"
-          disabled={amount <= 0}
-          onClick={handlePrimaryAction}
-          className={`mt-5 w-full rounded-2xl px-5 py-3.5 text-sm font-semibold text-white shadow-sm ${
-            side === "YES" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-rose-500 hover:bg-rose-600"
-          } disabled:cursor-not-allowed disabled:opacity-40`}
-        >
-          {confirmed ? "Previewed — no real trade placed" : `Preview Buy ${side} for ${formatMoney(amount || 0)}`}
-        </button>
-      )}
+      <button
+        type="button"
+        disabled={amount <= 0}
+        onClick={() => setConfirmed(true)}
+        className={`mt-5 w-full rounded-2xl px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+          mode === "SELL"
+            ? "bg-slate-700 hover:bg-slate-800"
+            : side === "YES"
+              ? "bg-emerald-500 hover:bg-emerald-600"
+              : "bg-rose-500 hover:bg-rose-600"
+        }`}
+      >
+        {confirmed
+          ? "Previewed — no real order placed"
+          : `Preview ${mode === "SELL" ? "Sell" : "Buy"} ${side} ${orderType === "LIMIT" ? `(Limit ${limitPrice}¢)` : "(Market)"}`}
+      </button>
 
       <p className="mt-3 text-center text-xs leading-5 text-slate-400">
         Demo only. This button does not execute a real transaction, move real money, or connect to a
         wallet.
       </p>
-
-      {onboardingOpen ? (
-        <OnboardingModal
-          outcome={outcome}
-          onClose={() => setOnboardingOpen(false)}
-          onComplete={(chosenAmount) => {
-            setOnboarded(true);
-            setOnboardingOpen(false);
-            if (chosenAmount > 0) {
-              setAmountInput(String(chosenAmount));
-            }
-          }}
-        />
-      ) : null}
     </div>
   );
 }
@@ -1881,7 +2120,7 @@ type PresentationStep = (typeof presentationSteps)[number];
 
 const presentationStepCopy: Record<
   PresentationStep,
-  { label: string; name: string; hint: string; whyThisMatters?: string }
+  { label: string; name: string; hint: string; whyThisMatters?: string; pillar?: PillarId }
 > = {
   current: {
     label: "Current market",
@@ -1893,24 +2132,28 @@ const presentationStepCopy: Record<
     name: "Market Intelligence",
     hint: "Turn the probability into something users can understand.",
     whyThisMatters: "Expands the product beyond expert traders.",
+    pillar: "understand",
   },
   participate: {
     label: "Participate",
     name: "One-Click Access",
     hint: "Once I develop conviction, participating should feel effortless.",
     whyThisMatters: "Removes friction after a user develops conviction.",
+    pillar: "participate",
   },
   "stay-ahead": {
     label: "Stay ahead",
     name: "Stay Ahead As The Market Moves",
     hint: "After I trade, help me manage the position without constantly watching the market.",
     whyThisMatters: "Creates reasons to return as markets evolve.",
+    pillar: "return",
   },
   distribute: {
     label: "Distribute",
-    name: "Probability Everywhere",
+    name: "Intelligence Everywhere",
     hint: "Users should not have to come to Polymarket to consume the signal.",
     whyThisMatters: "Turns distribution into an acquisition engine.",
+    pillar: "distribute",
   },
   vision: {
     label: "Vision",
@@ -1919,6 +2162,19 @@ const presentationStepCopy: Record<
     whyThisMatters: "Each product investment strengthens the next.",
   },
 };
+
+// Simple progress indicator shown in Presentation Mode: Current → Understand →
+// Participate → Return → Distribute → Vision. Kept separate from the more
+// descriptive presentationStepCopy names above so the progress trail always
+// reads as the four-pillar story regardless of the on-screen feature name.
+const presentationProgress: Array<{ step: PresentationStep; label: string; pillar?: PillarId }> = [
+  { step: "current", label: "Current" },
+  { step: "intelligence", label: "Understand", pillar: "understand" },
+  { step: "participate", label: "Participate", pillar: "participate" },
+  { step: "stay-ahead", label: "Return", pillar: "return" },
+  { step: "distribute", label: "Distribute", pillar: "distribute" },
+  { step: "vision", label: "Vision" },
+];
 
 export function FedRateMarket() {
   const [selectedId, setSelectedId] = useState<OutcomeId>(defaultOutcomeId);
@@ -2213,6 +2469,7 @@ export function FedRateMarket() {
             ) : null}
             {!presentationMode || presentationSteps[presentationStepIndex] === "stay-ahead" ? (
               <LiveMarketsSection
+                experience={experience}
                 onViewIntelligence={() => changeExperience("intelligence")}
                 showWhyThisMatters={presentationMode && presentationSteps[presentationStepIndex] === "stay-ahead"}
               />
@@ -2233,46 +2490,61 @@ export function FedRateMarket() {
 
       {presentationMode ? (
         <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="flex max-w-full items-center gap-3 rounded-full border border-slate-200 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur">
-            <button
-              type="button"
-              onClick={() => goToPresentationStep(presentationStepIndex - 1)}
-              disabled={presentationStepIndex === 0}
-              className="rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              Previous
-            </button>
-            <div className="hidden flex-col leading-tight sm:flex">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                {presentationStepIndex + 1} of {presentationSteps.length}
-              </p>
-              <p className="text-xs font-semibold text-slate-900">
-                {presentationStepCopy[presentationSteps[presentationStepIndex]].name}
-              </p>
+          <div className="flex max-w-full flex-col gap-2 rounded-[1.75rem] border border-slate-200 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur">
+            <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
+              {presentationProgress.map((item, index) => {
+                const isActive = presentationSteps[presentationStepIndex] === item.step;
+                const tone = item.pillar ? PILLARS[item.pillar] : null;
+
+                return (
+                  <span key={item.step} className="flex items-center gap-1.5">
+                    {index > 0 ? <span className="text-[10px] text-slate-300">→</span> : null}
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                        isActive
+                          ? tone
+                            ? `${tone.border} ${tone.wash} ${tone.text}`
+                            : "border-slate-900 bg-slate-900 text-white"
+                          : "border-transparent text-slate-400"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  </span>
+                );
+              })}
             </div>
-            <div className="flex items-center gap-1.5">
-              {presentationSteps.map((step, index) => (
-                <span
-                  key={step}
-                  className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                    index === presentationStepIndex ? "bg-slate-900" : "bg-slate-200"
-                  }`}
-                />
-              ))}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => goToPresentationStep(presentationStepIndex - 1)}
+                disabled={presentationStepIndex === 0}
+                className="rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                Previous
+              </button>
+              <div className="hidden flex-col leading-tight sm:flex">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                  {presentationStepIndex + 1} of {presentationSteps.length}
+                </p>
+                <p className="text-xs font-semibold text-slate-900">
+                  {presentationStepCopy[presentationSteps[presentationStepIndex]].name}
+                </p>
+              </div>
+              <p className="hidden max-w-[220px] text-xs font-medium text-slate-500 lg:block">
+                {presentationStepCopy[presentationSteps[presentationStepIndex]].hint}
+              </p>
+              <button
+                type="button"
+                onClick={() => goToPresentationStep(presentationStepIndex + 1)}
+                disabled={presentationStepIndex === presentationSteps.length - 1}
+                className="rounded-full bg-slate-950 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                {presentationStepIndex === presentationSteps.length - 1
+                  ? "Done"
+                  : `Next: ${presentationStepCopy[presentationSteps[presentationStepIndex + 1]].name}`}
+              </button>
             </div>
-            <p className="hidden max-w-[220px] text-xs font-medium text-slate-500 lg:block">
-              {presentationStepCopy[presentationSteps[presentationStepIndex]].hint}
-            </p>
-            <button
-              type="button"
-              onClick={() => goToPresentationStep(presentationStepIndex + 1)}
-              disabled={presentationStepIndex === presentationSteps.length - 1}
-              className="rounded-full bg-slate-950 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              {presentationStepIndex === presentationSteps.length - 1
-                ? "Done"
-                : `Next: ${presentationStepCopy[presentationSteps[presentationStepIndex + 1]].name}`}
-            </button>
           </div>
         </div>
       ) : null}

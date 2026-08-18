@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { PILLARS, type PillarId } from "@/lib/pillars";
 
 type LoopStage = {
-  id: string;
-  eyebrow: string;
+  id: PillarId;
   title: string;
   detail: string;
   angle: number; // degrees, 0 = top, clockwise
@@ -13,30 +13,26 @@ type LoopStage = {
 const LOOP_STAGES: LoopStage[] = [
   {
     id: "understand",
-    eyebrow: "Understand",
     title: "Market Intelligence",
     detail: "Why · Signal Quality · What Next",
     angle: 0,
   },
   {
     id: "participate",
-    eyebrow: "Participate",
     title: "One-Click Access",
     detail: "Simple onboarding · Invisible Web3",
     angle: 90,
   },
   {
     id: "return",
-    eyebrow: "Return",
-    title: "Live Markets",
-    detail: "More moments · Trading automation",
+    title: "Stay Ahead As The Market Moves",
+    detail: "Target Sell · Protect Position · Smart Alert",
     angle: 180,
   },
   {
     id: "distribute",
-    eyebrow: "Distribute",
-    title: "Probability Everywhere",
-    detail: "Media · Widgets · APIs · AI Agents",
+    title: "Intelligence Everywhere",
+    detail: "Media · Widgets · Intelligence API · AI",
     angle: 270,
   },
 ];
@@ -52,15 +48,14 @@ function polar(angleDeg: number, radius: number) {
 
 function LoopStageCard({ stage, radius }: { stage: LoopStage; radius: number }) {
   const { x, y } = polar(stage.angle, radius);
+  const s = PILLARS[stage.id];
   return (
     <div
       className="absolute w-[168px] -translate-x-1/2 -translate-y-1/2 sm:w-[188px]"
       style={{ left: `${x}%`, top: `${y}%` }}
     >
-      <div className="card-surface rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-center shadow-sm">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-700">
-          {stage.eyebrow}
-        </p>
+      <div className={`card-surface rounded-2xl border ${s.border} ${s.wash} px-4 py-3.5 text-center shadow-sm`}>
+        <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${s.text}`}>{s.label}</p>
         <p className="mt-1 text-sm font-semibold tracking-tight text-slate-950 sm:text-[15px]">
           {stage.title}
         </p>
@@ -70,13 +65,24 @@ function LoopStageCard({ stage, radius }: { stage: LoopStage; radius: number }) 
   );
 }
 
-function LoopArrow({ fromAngle, toAngle, radius }: { fromAngle: number; toAngle: number; radius: number }) {
+function LoopArrow({
+  fromAngle,
+  toAngle,
+  radius,
+  pillar,
+}: {
+  fromAngle: number;
+  toAngle: number;
+  radius: number;
+  pillar: PillarId;
+}) {
   // place a small chevron at the midpoint of the arc between two stages, rotated to point clockwise
   const midAngle = fromAngle + (((toAngle - fromAngle + 360) % 360) / 2);
   const { x, y } = polar(midAngle, radius);
+  const s = PILLARS[pillar];
   return (
     <div
-      className="absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
+      className={`absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm ${s.border} ${s.wash} ${s.text}`}
       style={{ left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${midAngle}deg)` }}
     >
       <span className="text-xs leading-none" style={{ transform: `rotate(${-midAngle}deg)` }}>
@@ -112,14 +118,14 @@ export function VisionPage() {
         <section className="mb-10 sm:mb-14">
           <div className="relative mx-auto aspect-square w-full max-w-[560px]">
             {/* connecting ring */}
-            <div className="absolute left-1/2 top-1/2 h-[62%] w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed border-blue-200" />
+            <div className="absolute left-1/2 top-1/2 h-[62%] w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed border-slate-200" />
 
             {/* stage cards */}
             {LOOP_STAGES.map((stage) => (
               <LoopStageCard key={stage.id} stage={stage} radius={44} />
             ))}
 
-            {/* directional arrows between stages, on the ring */}
+            {/* directional arrows between stages, on the ring — colored by the pillar being entered */}
             {LOOP_STAGES.map((stage, index) => {
               const next = LOOP_STAGES[(index + 1) % LOOP_STAGES.length];
               return (
@@ -128,6 +134,7 @@ export function VisionPage() {
                   fromAngle={stage.angle}
                   toAngle={next.angle}
                   radius={31}
+                  pillar={next.id}
                 />
               );
             })}
