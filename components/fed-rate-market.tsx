@@ -60,6 +60,47 @@ function InfoTooltip({ text, label = "More information" }: { text: string; label
   );
 }
 
+function SectionHeading({
+  eyebrow,
+  title,
+  subtitle,
+  tooltip,
+  badge,
+  badgeTone = "indigo",
+  id,
+}: {
+  eyebrow?: string;
+  title: string;
+  subtitle: string;
+  tooltip?: string;
+  badge?: string;
+  badgeTone?: "indigo" | "slate" | "blue";
+  id?: string;
+}) {
+  const badgeStyles =
+    badgeTone === "slate"
+      ? "border-slate-200 bg-slate-50 text-slate-500"
+      : badgeTone === "blue"
+        ? "border-blue-200 bg-blue-50 text-blue-700"
+        : "border-indigo-200 bg-indigo-50 text-indigo-700";
+
+  return (
+    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div id={id}>
+        {eyebrow ? <p className="text-sm font-medium text-slate-500">{eyebrow}</p> : null}
+        <div className={`flex items-center gap-1.5 ${eyebrow ? "mt-1" : ""}`}>
+          <h2 className="text-xl font-semibold text-slate-950">{title}</h2>
+          {tooltip ? <InfoTooltip text={tooltip} label={`About ${title}`} /> : null}
+        </div>
+        <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+      </div>
+      {badge ? (
+        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${badgeStyles}`}>{badge}</span>
+      ) : null}
+    </div>
+  );
+}
+
 function formatCents(value: number) {
   return `${Math.round(value * 100)}¢`;
 }
@@ -640,15 +681,13 @@ function DriverCard({ driver, index }: { driver: MarketDriver; index: number }) 
 function WhyMovingCard() {
   return (
     <div id="why-moving" className="card-surface rounded-3xl p-5 lg:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Question 1 of 3</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Why is this market moving?</h2>
-        </div>
-        <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-          Prototype analysis · fictional example
-        </span>
-      </div>
+      <SectionHeading
+        eyebrow="Question 1 of 3"
+        title="Why is this market moving?"
+        subtitle="Explains what may have caused the probability to change."
+        tooltip="This connects probability changes to the real-world information traders may be reacting to. Instead of only seeing that the market moved, users can understand what may have changed expectations."
+        badge="Prototype analysis · fictional example"
+      />
 
       <p className="text-sm leading-6 text-slate-600">{movingSummary}</p>
 
@@ -709,18 +748,13 @@ function SignalQualityCard() {
 
   return (
     <div id="signal-quality" className="card-surface rounded-3xl p-5 lg:p-6">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Question 2 of 3</p>
-          <div className="mt-1 flex items-center gap-1.5">
-            <h2 className="text-xl font-semibold text-slate-950">Signal Quality</h2>
-            <InfoTooltip text={signalQualityExplainer} label="About Signal Quality" />
-          </div>
-        </div>
-        <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-          Prototype analysis · fictional example
-        </span>
-      </div>
+      <SectionHeading
+        eyebrow="Question 2 of 3"
+        title="Signal Quality"
+        subtitle="Shows how strong the market behind the probability is."
+        tooltip={signalQualityExplainer}
+        badge="Prototype analysis · fictional example"
+      />
 
       <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
         <div className="rounded-[1.75rem] border border-slate-200 bg-slate-950 p-5 text-white">
@@ -875,15 +909,13 @@ function CatalystRow({ catalyst, isLast }: { catalyst: Catalyst; isLast: boolean
 function CatalystTimelineCard() {
   return (
     <div id="whats-next" className="card-surface rounded-3xl p-5 lg:p-6">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Question 3 of 3</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">What could move this market next?</h2>
-        </div>
-        <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-          Demonstration data · fictional dates
-        </span>
-      </div>
+      <SectionHeading
+        eyebrow="Question 3 of 3"
+        title="What could move this market next?"
+        subtitle="Highlights upcoming events that could change the probability."
+        tooltip="This shows upcoming events that could materially change trader expectations and therefore move the market probability."
+        badge="Demonstration data · fictional dates"
+      />
 
       <p className="text-sm leading-6 text-slate-600">
         These are the upcoming events most likely to change this probability again, in chronological
@@ -908,9 +940,11 @@ function CatalystTimelineCard() {
 function IntelligenceLayerSection({
   askActiveId,
   onAskActiveChange,
+  showWhyThisMatters = false,
 }: {
   askActiveId?: string | null;
   onAskActiveChange?: (id: string | null) => void;
+  showWhyThisMatters?: boolean;
 }) {
   const cards: Array<{ key: string; render: () => JSX.Element }> = [
     { key: "why-moving", render: () => <WhyMovingCard /> },
@@ -924,6 +958,9 @@ function IntelligenceLayerSection({
 
   return (
     <div className="space-y-6">
+      {showWhyThisMatters ? (
+        <WhyThisMattersNote text="Expands the product beyond expert traders." />
+      ) : null}
       {cards.map((card, index) => (
         <div key={card.key} className="intel-reveal" style={{ animationDelay: `${index * 90}ms` }}>
           {card.render()}
@@ -1056,17 +1093,14 @@ function AskThisMarket({
 
   return (
     <div id="ask-this-market" className="card-surface rounded-3xl p-5 lg:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Ask this market</p>
-          <h2 className="mt-1 text-lg font-semibold text-slate-950">
-            Ask a question in plain language
-          </h2>
-        </div>
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
-          Pre-written demo answers
-        </span>
-      </div>
+      <SectionHeading
+        eyebrow="Ask this market"
+        title="Ask a question in plain language"
+        subtitle="Ask questions about the prediction in plain English."
+        tooltip="This lets users interrogate the market in natural language. Instead of interpreting charts and trading terminology themselves, users can ask simple questions about what is happening."
+        badge="Pre-written demo answers"
+        badgeTone="slate"
+      />
 
       <p className="mb-4 text-sm leading-6 text-slate-600">
         Pick a question below. Answers are deterministic and based entirely on the fictional demo
@@ -1120,6 +1154,7 @@ type AutomationRule = {
   description: string;
   supporting: string;
   status: string;
+  tooltip: string;
 };
 
 const automationRules: AutomationRule[] = [
@@ -1129,6 +1164,8 @@ const automationRules: AutomationRule[] = [
     description: "Sell if probability reaches 75%",
     supporting: "Lock in upside",
     status: "Take profit at 75%",
+    tooltip:
+      "This lets a user define a target in advance. If the market reaches that level, Polymarket can attempt to sell the position automatically instead of requiring constant monitoring.",
   },
   {
     id: "protect-position",
@@ -1136,6 +1173,8 @@ const automationRules: AutomationRule[] = [
     description: "Sell if probability falls below 35%",
     supporting: "Limit downside",
     status: "Protect position below 35%",
+    tooltip:
+      "This helps users limit downside by defining a probability level at which they want to exit if the market moves against their position.",
   },
   {
     id: "smart-alert",
@@ -1143,27 +1182,31 @@ const automationRules: AutomationRule[] = [
     description: "Notify me if probability moves ±10 points",
     supporting: "Know when something meaningful changes",
     status: "Alert on ±10 point move",
+    tooltip:
+      "This watches the market for meaningful probability changes and brings the user back only when something important happens.",
   },
 ];
 
-function LiveMarketsSection({ onViewIntelligence }: { onViewIntelligence: () => void }) {
+function LiveMarketsSection({
+  onViewIntelligence,
+  showWhyThisMatters = false,
+}: {
+  onViewIntelligence: () => void;
+  showWhyThisMatters?: boolean;
+}) {
   const position = getOutcome("cut-25");
   const [activeRuleId, setActiveRuleId] = useState<AutomationRuleId | null>(null);
   const activeRule = activeRuleId ? automationRules.find((rule) => rule.id === activeRuleId) ?? null : null;
 
   return (
-    <div className="card-surface rounded-3xl p-5 lg:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Stay Ahead As The Market Moves</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">
-            Set your strategy once. Polymarket helps you react as probabilities change.
-          </h2>
-        </div>
-        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-          Demo Market · fictional data
-        </span>
-      </div>
+    <div id="stay-ahead" className="card-surface rounded-3xl p-5 lg:p-6">
+      <SectionHeading
+        eyebrow="Stay Ahead As The Market Moves"
+        title="Set your strategy once. Polymarket helps you react as probabilities change."
+        subtitle="Creates reasons to return as markets evolve, without requiring you to watch constantly."
+        badge="Demo Market · fictional data"
+        badgeTone="blue"
+      />
 
       <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -1182,24 +1225,36 @@ function LiveMarketsSection({ onViewIntelligence }: { onViewIntelligence: () => 
           const active = activeRuleId === rule.id;
 
           return (
-            <button
+            <div
               key={rule.id}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => setActiveRuleId((current) => (current === rule.id ? null : rule.id))}
-              className={`rounded-2xl border p-3.5 text-left transition-colors ${
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setActiveRuleId((current) => (current === rule.id ? null : rule.id));
+                }
+              }}
+              className={`cursor-pointer rounded-2xl border p-3.5 text-left transition-colors ${
                 active
                   ? "border-slate-950 bg-slate-950 text-white shadow-sm"
                   : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
               }`}
             >
-              <p className="text-sm font-semibold">{rule.title}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-semibold">{rule.title}</p>
+                <span onClick={(event) => event.stopPropagation()}>
+                  <InfoTooltip text={rule.tooltip} label={`About ${rule.title}`} />
+                </span>
+              </div>
               <p className={`mt-1 text-xs leading-5 ${active ? "text-slate-300" : "text-slate-500"}`}>
                 &ldquo;{rule.description}&rdquo;
               </p>
               <p className={`mt-2 text-[11px] font-medium uppercase tracking-[0.1em] ${active ? "text-slate-400" : "text-blue-600"}`}>
                 {rule.supporting}
               </p>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -1259,6 +1314,174 @@ function LiveMarketsSection({ onViewIntelligence }: { onViewIntelligence: () => 
         illustrates how Polymarket could let users respond to a market automatically instead of
         checking it constantly.
       </p>
+
+      {showWhyThisMatters ? (
+        <WhyThisMattersNote text="Creates reasons to return as markets evolve." />
+      ) : null}
+    </div>
+  );
+}
+
+function WhyThisMattersNote({ text }: { text: string }) {
+  return (
+    <p className="mt-4 inline-flex items-start gap-1.5 rounded-xl border border-purple-200 bg-purple-50/70 px-3 py-2 text-xs leading-5 text-purple-800">
+      <span className="font-semibold uppercase tracking-[0.08em] text-purple-600">Why this matters:</span>{" "}
+      {text}
+    </p>
+  );
+}
+
+const oneClickSteps = ["Understand", "Choose YES / NO", "$20", "Apple Pay / Card", "Done"];
+
+function OneClickAccessSection({ showWhyThisMatters = false }: { showWhyThisMatters?: boolean }) {
+  return (
+    <div id="one-click-access" className="card-surface rounded-3xl p-5 lg:p-6">
+      <SectionHeading
+        eyebrow="Participate"
+        title="One-Click Access"
+        subtitle="Move from understanding to participation with minimal friction."
+        tooltip="The goal is to make participation feel like a mainstream financial or consumer product. Wallet and blockchain complexity stays in the background while the user focuses on the decision."
+        badge="Concept only"
+        badgeTone="slate"
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        {oneClickSteps.map((step, index) => (
+          <div key={step} className="flex items-center gap-2">
+            <span
+              className={`rounded-full border px-3.5 py-2 text-sm font-semibold ${
+                index === oneClickSteps.length - 1
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                  : "border-slate-200 bg-white text-slate-800"
+              }`}
+            >
+              {step}
+            </span>
+            {index < oneClickSteps.length - 1 ? <span className="text-slate-300">→</span> : null}
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-4 text-xs leading-5 text-slate-400">
+        Prototype concept only. No real wallet, payment, or blockchain transaction is created —
+        private keys, gas fees and wallet addresses never surface to the user.
+      </p>
+
+      {showWhyThisMatters ? (
+        <WhyThisMattersNote text="Removes friction after a user develops conviction." />
+      ) : null}
+    </div>
+  );
+}
+
+type DistributionSurface = {
+  id: string;
+  label: string;
+  detail: string;
+};
+
+const distributionSurfaces: DistributionSurface[] = [
+  { id: "news", label: "News", detail: "\u201cMarkets imply a 57% chance of a 25 bps cut.\u201d" },
+  { id: "media", label: "Media", detail: "Embeddable probability widget on any article." },
+  { id: "api", label: "API", detail: "GET /probability/fed-rate-decision → 57%" },
+  { id: "ai", label: "AI", detail: "Agents query live probability as structured data." },
+];
+
+function ProbabilityEverywhereSection({ showWhyThisMatters = false }: { showWhyThisMatters?: boolean }) {
+  const position = getOutcome("cut-25");
+
+  return (
+    <div id="probability-everywhere" className="card-surface rounded-3xl p-5 lg:p-6">
+      <SectionHeading
+        eyebrow="Distribute"
+        title="Probability Everywhere"
+        subtitle="Bring Polymarket intelligence to the places users already consume information."
+        tooltip="This allows Polymarket probabilities and intelligence to appear inside news, media, APIs and other products instead of requiring every user to visit Polymarket directly."
+        badge="Concept only"
+        badgeTone="slate"
+      />
+
+      <div className="grid gap-3 sm:grid-cols-4">
+        {distributionSurfaces.map((surface) => (
+          <div key={surface.id} className="rounded-2xl border border-slate-200 bg-white/90 p-3.5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+              {surface.label}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-slate-600">{surface.detail}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-950 p-4 text-white">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+          Example widget
+        </p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-medium text-slate-200">Fed rate decision — 25 bps cut</p>
+          <p className="text-2xl font-semibold text-emerald-400">{position.probability}%</p>
+        </div>
+        <p className="mt-1 text-[11px] text-slate-500">Powered by Polymarket Intelligence · Demo widget</p>
+      </div>
+
+      <p className="mt-4 text-xs leading-5 text-slate-400">
+        Prototype concept only. These surfaces are illustrative mockups and do not connect to real
+        news, media, or developer platforms.
+      </p>
+
+      {showWhyThisMatters ? (
+        <WhyThisMattersNote text="Turns distribution into an acquisition engine." />
+      ) : null}
+    </div>
+  );
+}
+
+const presentationVisionStages = ["Understand", "Participate", "Return", "Distribute"];
+
+function PresentationVisionSummary() {
+  return (
+    <div id="presentation-vision" className="card-surface rounded-3xl p-5 lg:p-6">
+      <SectionHeading
+        eyebrow="Vision"
+        title="From prediction market to prediction network"
+        subtitle="The product bets reinforce one another rather than operate independently."
+        badge="Strategy"
+        badgeTone="slate"
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        {presentationVisionStages.map((stage, index) => (
+          <div key={stage} className="flex items-center gap-2">
+            <span className="rounded-full border border-blue-200 bg-blue-50 px-3.5 py-2 text-sm font-semibold text-blue-800">
+              {stage}
+            </span>
+            {index < presentationVisionStages.length - 1 ? (
+              <span className="text-slate-300">→</span>
+            ) : (
+              <span className="text-slate-300">→ Understand</span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-purple-200 bg-purple-50/60 p-4 text-center">
+        <p className="text-sm font-semibold text-purple-900">
+          More users → More participation → Deeper liquidity → Stronger signals
+        </p>
+      </div>
+
+      <p className="mt-5 text-center text-sm font-semibold text-slate-900">
+        &ldquo;The market produces the signal. Intelligence makes it useful. Distribution makes it
+        ubiquitous.&rdquo;
+      </p>
+
+      <Link
+        href="/vision"
+        className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-blue-700 transition-colors hover:text-blue-800"
+      >
+        View full Vision page <span aria-hidden>→</span>
+      </Link>
+
+      <WhyThisMattersNote text="Each product investment strengthens the next." />
     </div>
   );
 }
@@ -1648,23 +1871,53 @@ function TradingPanel({ outcome }: { outcome: Outcome }) {
 const presentationSteps = [
   "current",
   "intelligence",
-  "why-moving",
-  "chart-event",
-  "signal-quality",
-  "whats-next",
-  "ask-70",
+  "participate",
+  "stay-ahead",
+  "distribute",
+  "vision",
 ] as const;
 
 type PresentationStep = (typeof presentationSteps)[number];
 
-const presentationStepCopy: Record<PresentationStep, { label: string; hint: string }> = {
-  current: { label: "Start", hint: "What the market believes right now." },
-  intelligence: { label: "Add intelligence", hint: "Switch on the Intelligence Layer." },
-  "why-moving": { label: "Why is this moving?", hint: "Scroll to the drivers behind the move." },
-  "chart-event": { label: "Show a driver on the chart", hint: "Open the Fed Commentary event marker." },
-  "signal-quality": { label: "How strong is the signal?", hint: "Scroll to Signal Quality." },
-  "whats-next": { label: "What could change it next?", hint: "Scroll to upcoming catalysts." },
-  "ask-70": { label: "Ask the market", hint: "Ask what it would take to reach 70%." },
+const presentationStepCopy: Record<
+  PresentationStep,
+  { label: string; name: string; hint: string; whyThisMatters?: string }
+> = {
+  current: {
+    label: "Current market",
+    name: "Current Market",
+    hint: "The market tells me WHAT people currently believe.",
+  },
+  intelligence: {
+    label: "Market intelligence",
+    name: "Market Intelligence",
+    hint: "Turn the probability into something users can understand.",
+    whyThisMatters: "Expands the product beyond expert traders.",
+  },
+  participate: {
+    label: "Participate",
+    name: "One-Click Access",
+    hint: "Once I develop conviction, participating should feel effortless.",
+    whyThisMatters: "Removes friction after a user develops conviction.",
+  },
+  "stay-ahead": {
+    label: "Stay ahead",
+    name: "Stay Ahead As The Market Moves",
+    hint: "After I trade, help me manage the position without constantly watching the market.",
+    whyThisMatters: "Creates reasons to return as markets evolve.",
+  },
+  distribute: {
+    label: "Distribute",
+    name: "Probability Everywhere",
+    hint: "Users should not have to come to Polymarket to consume the signal.",
+    whyThisMatters: "Turns distribution into an acquisition engine.",
+  },
+  vision: {
+    label: "Vision",
+    name: "Vision",
+    hint: "The product bets reinforce one another rather than operate independently.",
+    whyThisMatters: "Each product investment strengthens the next.",
+  },
 };
 
 export function FedRateMarket() {
@@ -1700,27 +1953,25 @@ export function FedRateMarket() {
   };
 
   const runPresentationStep = (step: PresentationStep) => {
+    setChartActiveEventId(null);
+    setAskActiveId(null);
     if (step === "current") {
       changeExperience("current");
     } else if (step === "intelligence") {
       changeExperience("intelligence");
-    } else if (step === "why-moving") {
-      changeExperience("intelligence");
       scrollToId("why-moving");
-    } else if (step === "chart-event") {
+    } else if (step === "participate") {
       changeExperience("intelligence");
-      setChartActiveEventId("fed-commentary-event");
-    } else if (step === "signal-quality") {
+      scrollToId("one-click-access");
+    } else if (step === "stay-ahead") {
       changeExperience("intelligence");
-      setChartActiveEventId(null);
-      scrollToId("signal-quality");
-    } else if (step === "whats-next") {
+      scrollToId("stay-ahead");
+    } else if (step === "distribute") {
       changeExperience("intelligence");
-      scrollToId("whats-next");
-    } else if (step === "ask-70") {
+      scrollToId("probability-everywhere");
+    } else if (step === "vision") {
       changeExperience("intelligence");
-      scrollToId("ask-this-market");
-      setAskActiveId("reach-70");
+      scrollToId("presentation-vision");
     }
   };
 
@@ -1877,9 +2128,16 @@ export function FedRateMarket() {
                 experience === "intelligence" ? "hero-glow-in" : ""
               }`}
             >
-              <p className="text-sm font-medium tracking-[0.22em] text-slate-500 uppercase">
-                Market-implied probability
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium tracking-[0.22em] text-slate-500 uppercase">
+                  Market-implied probability
+                </p>
+                <InfoTooltip
+                  text="This is the probability implied by current market trading. If YES trades around 57¢, the market is roughly pricing the outcome at 57%. It is not a poll and does not mean 57% of users voted YES."
+                  label="About Market-implied probability"
+                />
+              </div>
+              <p className="mt-1 text-sm text-slate-500">What the market currently believes.</p>
               <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p
@@ -1942,10 +2200,30 @@ export function FedRateMarket() {
               onActiveEventChange={setChartActiveEventId}
             />
             {experience === "intelligence" ? (
-              <IntelligenceLayerSection askActiveId={askActiveId} onAskActiveChange={setAskActiveId} />
+              <IntelligenceLayerSection
+                askActiveId={askActiveId}
+                onAskActiveChange={setAskActiveId}
+                showWhyThisMatters={presentationMode && presentationSteps[presentationStepIndex] === "intelligence"}
+              />
             ) : null}
-            {!presentationMode ? (
-              <LiveMarketsSection onViewIntelligence={() => changeExperience("intelligence")} />
+            {experience === "intelligence" ? (
+              <OneClickAccessSection
+                showWhyThisMatters={presentationMode && presentationSteps[presentationStepIndex] === "participate"}
+              />
+            ) : null}
+            {!presentationMode || presentationSteps[presentationStepIndex] === "stay-ahead" ? (
+              <LiveMarketsSection
+                onViewIntelligence={() => changeExperience("intelligence")}
+                showWhyThisMatters={presentationMode && presentationSteps[presentationStepIndex] === "stay-ahead"}
+              />
+            ) : null}
+            {experience === "intelligence" ? (
+              <ProbabilityEverywhereSection
+                showWhyThisMatters={presentationMode && presentationSteps[presentationStepIndex] === "distribute"}
+              />
+            ) : null}
+            {presentationMode && presentationSteps[presentationStepIndex] === "vision" ? (
+              <PresentationVisionSummary />
             ) : null}
           </div>
 
@@ -1955,15 +2233,23 @@ export function FedRateMarket() {
 
       {presentationMode ? (
         <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur">
+          <div className="flex max-w-full items-center gap-3 rounded-full border border-slate-200 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur">
             <button
               type="button"
               onClick={() => goToPresentationStep(presentationStepIndex - 1)}
               disabled={presentationStepIndex === 0}
               className="rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
             >
-              Back
+              Previous
             </button>
+            <div className="hidden flex-col leading-tight sm:flex">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                {presentationStepIndex + 1} of {presentationSteps.length}
+              </p>
+              <p className="text-xs font-semibold text-slate-900">
+                {presentationStepCopy[presentationSteps[presentationStepIndex]].name}
+              </p>
+            </div>
             <div className="flex items-center gap-1.5">
               {presentationSteps.map((step, index) => (
                 <span
@@ -1974,7 +2260,7 @@ export function FedRateMarket() {
                 />
               ))}
             </div>
-            <p className="hidden text-xs font-medium text-slate-500 sm:block">
+            <p className="hidden max-w-[220px] text-xs font-medium text-slate-500 lg:block">
               {presentationStepCopy[presentationSteps[presentationStepIndex]].hint}
             </p>
             <button
@@ -1985,7 +2271,7 @@ export function FedRateMarket() {
             >
               {presentationStepIndex === presentationSteps.length - 1
                 ? "Done"
-                : presentationStepCopy[presentationSteps[presentationStepIndex + 1]].label}
+                : `Next: ${presentationStepCopy[presentationSteps[presentationStepIndex + 1]].name}`}
             </button>
           </div>
         </div>
