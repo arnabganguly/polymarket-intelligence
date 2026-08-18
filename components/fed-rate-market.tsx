@@ -1112,8 +1112,166 @@ function AskThisMarket({
     </div>
   );
 }
+type AutomationRuleId = "take-profit" | "protect-position" | "price-alert";
 
+type AutomationRule = {
+  id: AutomationRuleId;
+  title: string;
+  description: string;
+  accent: string;
+};
 
+const automationRules: AutomationRule[] = [
+  {
+    id: "take-profit",
+    title: "Take Profit",
+    description: "Sell if probability reaches 75%",
+    accent: "emerald",
+  },
+  {
+    id: "protect-position",
+    title: "Protect Position",
+    description: "Sell if probability falls below 35%",
+    accent: "rose",
+  },
+  {
+    id: "price-alert",
+    title: "Price Alert",
+    description: "Notify me if probability moves ±10 points",
+    accent: "blue",
+  },
+];
+
+function LiveMarketsSection() {
+  const liveOutcomeIds: OutcomeId[] = ["cut-25", "no-change", "cut-50"];
+  const liveOutcomes = liveOutcomeIds.map((id) => getOutcome(id));
+  const [selectedId, setSelectedId] = useState<OutcomeId>("cut-25");
+  const [activeRuleId, setActiveRuleId] = useState<AutomationRuleId | null>(null);
+  const selected = getOutcome(selectedId);
+  const activeRule = activeRuleId ? automationRules.find((rule) => rule.id === activeRuleId) ?? null : null;
+
+  function statusCopy(rule: AutomationRule) {
+    if (rule.id === "take-profit") return "Take profit at 75%";
+    if (rule.id === "protect-position") return "Protect position below 35%";
+    return "Alert on ±10 point move";
+  }
+
+  return (
+    <div className="card-surface rounded-3xl p-5 lg:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-slate-500">Live Markets</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">
+            Related markets moving with this event
+          </h2>
+        </div>
+        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+          Demo Market · fictional data
+        </span>
+      </div>
+
+      <p className="text-sm leading-6 text-slate-600">
+        As the same real-world event unfolds, several related markets move together. Selecting one
+        below lets you set up simple automation so you don&rsquo;t have to watch the probability
+        yourself.
+      </p>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {liveOutcomes.map((outcome) => {
+          const active = outcome.id === selectedId;
+
+          return (
+            <button
+              key={outcome.id}
+              type="button"
+              onClick={() => setSelectedId(outcome.id)}
+              className={`rounded-2xl border p-4 text-left transition-colors ${
+                active
+                  ? "border-blue-600 bg-blue-50/70 shadow-sm"
+                  : "border-slate-200 bg-white/85 hover:border-slate-300 hover:bg-white"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-950">{outcome.label}</p>
+                <span className="flex h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+              </div>
+              <p className={`mt-2 text-2xl font-semibold tabular-nums ${active ? "text-blue-700" : "text-slate-950"}`}>
+                {outcome.probability}%
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Yes {formatCents(outcome.yesPrice)} · No {formatCents(outcome.noPrice)}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              Automate My Position
+            </p>
+            <p className="mt-1 text-sm text-slate-600">
+              For &ldquo;{selected.label}&rdquo; — currently {selected.probability}%.
+            </p>
+          </div>
+          {activeRule ? (
+            <span className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              ACTIVE
+            </span>
+          ) : null}
+        </div>
+
+        <div className="grid gap-2.5 sm:grid-cols-3">
+          {automationRules.map((rule) => {
+            const active = activeRuleId === rule.id;
+
+            return (
+              <button
+                key={rule.id}
+                type="button"
+                onClick={() => setActiveRuleId((current) => (current === rule.id ? null : rule.id))}
+                className={`rounded-2xl border p-3.5 text-left transition-colors ${
+                  active
+                    ? "border-slate-950 bg-slate-950 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
+                }`}
+              >
+                <p className="text-sm font-semibold">{rule.title}</p>
+                <p className={`mt-1 text-xs leading-5 ${active ? "text-slate-300" : "text-slate-500"}`}>
+                  &ldquo;{rule.description}&rdquo;
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
+        {activeRule ? (
+          <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <span className="flex h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">Active</p>
+              <p className="mt-0.5 text-sm font-medium text-emerald-800">{statusCopy(activeRule)}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-4 text-xs leading-5 text-slate-400">
+            Select a control above to see how automation would respond as this probability changes —
+            no real order is placed.
+          </p>
+        )}
+
+        <p className="mt-4 text-xs leading-5 text-slate-400">
+          Prototype concept only. This does not place, monitor, or execute a real trade — it
+          illustrates how Polymarket could let users respond to a market automatically instead of
+          checking it constantly.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function OnboardingModal({
   outcome,
@@ -1796,6 +1954,7 @@ export function FedRateMarket() {
             {experience === "intelligence" ? (
               <IntelligenceLayerSection askActiveId={askActiveId} onAskActiveChange={setAskActiveId} />
             ) : null}
+            {!presentationMode ? <LiveMarketsSection /> : null}
           </div>
 
           <TradingPanel outcome={outcome} />
