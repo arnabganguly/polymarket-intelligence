@@ -205,6 +205,65 @@ export const signalQualityRating: SignalQualityTier = "Strong";
 export const signalQualityExplainer =
   "Signal Quality measures characteristics of the market producing this probability, such as liquidity, trading activity, spread and participation. It does not measure whether the prediction itself will ultimately be correct.";
 
+// ---------------------------------------------------------------------------
+// Market confidence badge (plain-English layer)
+//
+// This is the glanceable, non-trader-facing translation of Signal Quality.
+// A casual visitor never needs to know what a "dispute bond" or a "wallet
+// concentration ratio" is — they just need three honest labels: Verified
+// Market, Thin Market, or Low Liquidity. The detailed mechanics live one
+// tap away in the Signal Quality card below.
+// ---------------------------------------------------------------------------
+
+export type MarketConfidenceLevel = "verified" | "thin" | "low";
+
+export type MarketConfidenceBadge = {
+  level: MarketConfidenceLevel;
+  label: string;
+  emoji: string;
+  caption: string;
+};
+
+export const marketConfidenceByTier: Record<SignalQualityTier, MarketConfidenceBadge> = {
+  "Very strong": {
+    level: "verified",
+    label: "Verified Market",
+    emoji: "🟢",
+    caption: "Backed by deep trading activity across many independent participants.",
+  },
+  Strong: {
+    level: "verified",
+    label: "Verified Market",
+    emoji: "🟢",
+    caption: "Backed by deep trading activity across many independent participants.",
+  },
+  Moderate: {
+    level: "thin",
+    label: "Thin Market",
+    emoji: "🟡",
+    caption: "Fewer traders and less volume than usual — the price can be more easily moved.",
+  },
+  Weak: {
+    level: "low",
+    label: "Low Liquidity",
+    emoji: "🔴",
+    caption: "Very few traders are active — treat this probability with caution.",
+  },
+};
+
+export const marketConfidenceBadge = marketConfidenceByTier[signalQualityRating];
+
+/**
+ * The underlying trust mechanism this badge is built on. Shown as a compact,
+ * secondary "built on" tag row beneath the plain-English badge — not the
+ * headline, but not hidden either.
+ */
+export const signalQualityBuiltOn = [
+  "Dispute bond scales with market size",
+  "Resolution rules are versioned",
+  "Wash-trade & concentration flags",
+];
+
 export type SignalMetric = {
   id: string;
   label: string;

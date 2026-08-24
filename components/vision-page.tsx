@@ -18,22 +18,28 @@ const LOOP_STAGES: LoopStage[] = [
     angle: 0,
   },
   {
+    id: "trust",
+    title: "Signal Quality Score",
+    detail: "Verified Market · Thin Market · Low Liquidity",
+    angle: 72,
+  },
+  {
     id: "participate",
     title: "One-Click Access",
     detail: "Simple onboarding · Invisible Web3",
-    angle: 90,
+    angle: 144,
   },
   {
     id: "return",
     title: "Stay Ahead As The Market Moves",
     detail: "Target Sell · Protect Position · Smart Alert",
-    angle: 180,
+    angle: 216,
   },
   {
     id: "distribute",
     title: "Intelligence Everywhere",
     detail: "Media · Widgets · Intelligence API · AI",
-    angle: 270,
+    angle: 288,
   },
 ];
 
@@ -169,9 +175,15 @@ export function VisionPage() {
           <p className="mx-auto max-w-2xl text-xl font-semibold leading-snug tracking-tight text-slate-950 sm:text-2xl">
             The market produces the signal.
             <br />
+            Trust makes the signal worth believing.
+            <br />
             Intelligence makes it useful.
             <br />
             Distribution makes it ubiquitous.
+          </p>
+          <p className="mx-auto mt-4 max-w-md text-xs leading-5 text-slate-400">
+            We only distribute a probability once we can also show how much confidence it deserves.
+            That is why Trust sits between Understand and Participate, not bolted on after the fact.
           </p>
         </section>
       </div>

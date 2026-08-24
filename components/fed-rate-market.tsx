@@ -11,9 +11,11 @@ import {
   getOutcome,
   marketDrivers,
   marketMeta,
+  marketConfidenceBadge,
   movingSummary,
   outcomes,
   signalMetrics,
+  signalQualityBuiltOn,
   signalQualityExplainer,
   signalQualityRating,
   signalQualityTiers,
@@ -34,6 +36,7 @@ type Experience = "current" | "intelligence";
 const TOOLTIP_ICON_TONE: Record<"neutral" | PillarId, string> = {
   neutral: "border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700",
   understand: "border-violet-300 text-violet-600 hover:border-violet-400 hover:text-violet-700",
+  trust: "border-amber-300 text-amber-600 hover:border-amber-400 hover:text-amber-700",
   participate: "border-blue-300 text-blue-600 hover:border-blue-400 hover:text-blue-700",
   return: "border-teal-300 text-teal-600 hover:border-teal-400 hover:text-teal-700",
   distribute: "border-indigo-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700",
@@ -674,7 +677,7 @@ function ExperienceToggle({
 
       {isIntelligence ? (
         <p className="border-t border-slate-100 bg-slate-50/60 px-5 py-2 text-center text-xs font-medium text-slate-600">
-          Understand. Participate. Stay ahead. Distribute.
+          Understand. Trust. Participate. Stay ahead. Distribute.
         </p>
       ) : null}
     </div>
@@ -802,8 +805,38 @@ function SignalMetricRow({ metric }: { metric: SignalMetric }) {
   );
 }
 
+/**
+ * The glanceable, plain-English trust signal. This is what a non-trader sees
+ * at-a-glance next to the price — no jargon, just a color and a one-line
+ * caption. Tapping it jumps to the full Signal Quality card for anyone who
+ * wants the underlying mechanics.
+ */
+function MarketConfidenceChip({ compact = false }: { compact?: boolean }) {
+  const badge = marketConfidenceBadge;
+  const toneClass =
+    badge.level === "verified"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : badge.level === "thin"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-rose-200 bg-rose-50 text-rose-700";
+
+  return (
+    <a
+      href="#signal-quality"
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold transition-colors hover:brightness-95 ${toneClass} ${
+        compact ? "text-xs" : "text-sm"
+      }`}
+      title={badge.caption}
+    >
+      <span aria-hidden>{badge.emoji}</span>
+      {badge.label}
+    </a>
+  );
+}
+
 function SignalQualityCard() {
   const tierIndex = signalQualityTiers.indexOf(signalQualityRating);
+  const badge = marketConfidenceBadge;
 
   return (
     <div id="signal-quality" className="card-surface rounded-3xl p-5 lg:p-6">
@@ -813,13 +846,18 @@ function SignalQualityCard() {
         subtitle="Shows how strong the market behind the probability is."
         tooltip={signalQualityExplainer}
         badge="Prototype analysis · fictional example"
-        badgeTone="understand"
+        badgeTone="trust"
       />
+
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <MarketConfidenceChip />
+        <span className="text-xs text-slate-400">{badge.caption}</span>
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
         <div className="rounded-[1.75rem] border border-slate-200 bg-slate-950 p-5 text-white">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
-            Signal quality
+            Signal quality score
           </p>
           <p className="mt-2 text-4xl font-semibold tracking-tight text-emerald-400">
             {signalQualityRating.toUpperCase()}
@@ -851,6 +889,26 @@ function SignalQualityCard() {
             <SignalMetricRow key={metric.id} metric={metric} />
           ))}
         </div>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+          Built on
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {signalQualityBuiltOn.map((item) => (
+            <span
+              key={item}
+              className="rounded-full border border-amber-200 bg-white/80 px-3 py-1 text-xs font-medium text-amber-800"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] leading-5 text-amber-700/80">
+          These are the resolution-integrity mechanisms this score is built on — not shown to
+          casual users, but always available to anyone who taps in.
+        </p>
       </div>
 
       <p className="mt-5 text-xs leading-5 text-slate-400">
@@ -1009,7 +1067,6 @@ function IntelligenceLayerSection({
 }) {
   const cards: Array<{ key: string; render: () => JSX.Element }> = [
     { key: "why-moving", render: () => <WhyMovingCard /> },
-    { key: "signal-quality", render: () => <SignalQualityCard /> },
     { key: "catalysts", render: () => <CatalystTimelineCard /> },
     {
       key: "ask",
@@ -1031,6 +1088,32 @@ function IntelligenceLayerSection({
           {card.render()}
         </div>
       ))}
+    </PillarGroup>
+  );
+}
+
+/**
+ * Trust gets its own pillar group rather than living inside Market
+ * Intelligence. A probability is only worth distributing once we can also
+ * show how much confidence it deserves — so this is deliberately a separate
+ * step in the product story, not a sub-feature of Understand.
+ */
+function TrustLayerSection({ showWhyThisMatters = false }: { showWhyThisMatters?: boolean }) {
+  return (
+    <PillarGroup
+      pillar="trust"
+      title="Signal Quality Score"
+      subtitle="Show how much confidence this probability deserves — in plain English first."
+    >
+      {showWhyThisMatters ? (
+        <WhyThisMattersNote
+          pillar="trust"
+          text="Protects distribution: a probability is only worth spreading everywhere once its quality is visible."
+        />
+      ) : null}
+      <div className="intel-reveal">
+        <SignalQualityCard />
+      </div>
     </PillarGroup>
   );
 }
@@ -2110,6 +2193,7 @@ function TradingPanel({ outcome }: { outcome: Outcome }) {
 const presentationSteps = [
   "current",
   "intelligence",
+  "trust",
   "participate",
   "stay-ahead",
   "distribute",
@@ -2133,6 +2217,13 @@ const presentationStepCopy: Record<
     hint: "Turn the probability into something users can understand.",
     whyThisMatters: "Expands the product beyond expert traders.",
     pillar: "understand",
+  },
+  trust: {
+    label: "Trust",
+    name: "Signal Quality Score",
+    hint: "Before I distribute this number anywhere, show me how much confidence it deserves.",
+    whyThisMatters: "Protects distribution: a probability is only worth spreading everywhere once its quality is visible.",
+    pillar: "trust",
   },
   participate: {
     label: "Participate",
@@ -2164,12 +2255,14 @@ const presentationStepCopy: Record<
 };
 
 // Simple progress indicator shown in Presentation Mode: Current → Understand →
-// Participate → Return → Distribute → Vision. Kept separate from the more
-// descriptive presentationStepCopy names above so the progress trail always
-// reads as the four-pillar story regardless of the on-screen feature name.
+// Trust → Participate → Return → Distribute → Vision. Kept separate from the
+// more descriptive presentationStepCopy names above so the progress trail
+// always reads as the five-pillar story regardless of the on-screen feature
+// name.
 const presentationProgress: Array<{ step: PresentationStep; label: string; pillar?: PillarId }> = [
   { step: "current", label: "Current" },
   { step: "intelligence", label: "Understand", pillar: "understand" },
+  { step: "trust", label: "Trust", pillar: "trust" },
   { step: "participate", label: "Participate", pillar: "participate" },
   { step: "stay-ahead", label: "Return", pillar: "return" },
   { step: "distribute", label: "Distribute", pillar: "distribute" },
@@ -2216,6 +2309,9 @@ export function FedRateMarket() {
     } else if (step === "intelligence") {
       changeExperience("intelligence");
       scrollToId("why-moving");
+    } else if (step === "trust") {
+      changeExperience("intelligence");
+      scrollToId("signal-quality");
     } else if (step === "participate") {
       changeExperience("intelligence");
       scrollToId("one-click-access");
@@ -2405,16 +2501,19 @@ export function FedRateMarket() {
                   </p>
                   <p className="mt-1 text-sm font-medium text-slate-500">Selected outcome: {outcome.label}</p>
                   {experience === "intelligence" ? (
-                    <p
-                      className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold ${
-                        recentChange >= 0
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : "border-rose-200 bg-rose-50 text-rose-700"
-                      }`}
-                    >
-                      {recentChange >= 0 ? "↑" : "↓"} {Math.abs(recentChange)} percentage points over
-                      the last 3 days
-                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <MarketConfidenceChip />
+                      <p
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold ${
+                          recentChange >= 0
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-rose-200 bg-rose-50 text-rose-700"
+                        }`}
+                      >
+                        {recentChange >= 0 ? "↑" : "↓"} {Math.abs(recentChange)} percentage points over
+                        the last 3 days
+                      </p>
+                    </div>
                   ) : null}
                   {!presentationMode ? (
                     <p className="mt-3 max-w-md text-sm leading-6 text-slate-600">
@@ -2460,6 +2559,11 @@ export function FedRateMarket() {
                 askActiveId={askActiveId}
                 onAskActiveChange={setAskActiveId}
                 showWhyThisMatters={presentationMode && presentationSteps[presentationStepIndex] === "intelligence"}
+              />
+            ) : null}
+            {experience === "intelligence" ? (
+              <TrustLayerSection
+                showWhyThisMatters={presentationMode && presentationSteps[presentationStepIndex] === "trust"}
               />
             ) : null}
             {experience === "intelligence" ? (

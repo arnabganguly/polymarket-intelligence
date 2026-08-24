@@ -1,6 +1,6 @@
 // Single source of truth for the four Polymarket+ strategic pillars so the
 // same very-light wash colors and accents are used everywhere in the app.
-export type PillarId = "understand" | "participate" | "return" | "distribute";
+export type PillarId = "understand" | "trust" | "participate" | "return" | "distribute";
 
 export type PillarStyle = {
   id: PillarId;
@@ -25,6 +25,16 @@ export const PILLARS: Record<PillarId, PillarStyle> = {
     border: "border-violet-200",
     text: "text-violet-700",
     dot: "bg-violet-500",
+  },
+  trust: {
+    id: "trust",
+    label: "Trust",
+    featureTitle: "Signal Quality Score",
+    hex: "#FFF8EC",
+    wash: "bg-[#FFF8EC]",
+    border: "border-amber-200",
+    text: "text-amber-700",
+    dot: "bg-amber-500",
   },
   participate: {
     id: "participate",
@@ -58,4 +68,4 @@ export const PILLARS: Record<PillarId, PillarStyle> = {
   },
 };
 
-export const PILLAR_ORDER: PillarId[] = ["understand", "participate", "return", "distribute"];
+export const PILLAR_ORDER: PillarId[] = ["understand", "trust", "participate", "return", "distribute"];
